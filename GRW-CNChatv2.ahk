@@ -73,7 +73,7 @@ myGuiMarginY := 8
 ;读取并校验配置文件对应的内容
 readCheckCfgData()
 ;创建主界面
-myGui := Gui("-DPIScale -Resize -MaximizeBox", "游戏无缝输入中文" toolVersion)
+myGui := Gui("-Resize -MaximizeBox", "游戏无缝输入中文" toolVersion)
 myGui.SetFont(, "SimSun(宋体)")
 myGui.MarginX := myGuiMarginX
 myGui.MarginY := myGuiMarginY
@@ -93,6 +93,9 @@ A_TrayMenu.Delete()
 A_TrayMenu.Add("打开", clickOpen)
 A_TrayMenu.Add("重新加载", clickReload)
 A_TrayMenu.Add("退出", clickExit)
+A_TrayMenu.ClickCount := 1
+A_TrayMenu.Default := "打开"
+A_IconTip := "游戏无缝输入中文" toolVersion
 
 ;启动声明
 declarationMsgBox()
