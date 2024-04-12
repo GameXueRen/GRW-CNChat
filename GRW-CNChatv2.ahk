@@ -32,10 +32,8 @@ pressTimeName := "键击延时"
 ; isFullscreenName := "兼容全屏"
 ;实验性兼容全屏模式
 ; isFullscreen := 0
-;聊天窗口句柄
-chatGuiHwnd := 0
-;游戏窗口句柄
-gameHwnd := 0
+;聊天框
+chatGui := 0
 ;是否开启“输入框调整模式”
 isMoveEdit := 0
 ;输入框高度
@@ -61,14 +59,15 @@ tabKeyName := "Tab"
 ;发送文本所有方式及对应说明
 sendMethodArr := ["ControlSendText", "Send{ASC nnnnn}", "SendText", "PostMessage", "CopyPaste"]
 sendMethodNameArr := ["发送字符到游戏窗口", "模拟{Alt + GBK编码}发送", "发送字符到已激活窗口", "发送字符到消息队列", "模拟复制粘贴"]
-;存储所有已启用的热键
-hotkeysArr := []
 ;主界面宽、高
 myGuiW := 330
 myGuiH := 280
 ;主界面水平边距、垂直边距
 myGuiMarginX :=8
 myGuiMarginY := 8
+
+;调试
+; ListLines()
 
 ;读取并校验配置文件对应的内容
 readCheckCfgData()
@@ -348,9 +347,9 @@ pressTime_Click(GuiCtrlObj, Info)
 			return
 		}
 		minValue := Integer(minValue)
-		if minValue > 1000
+		if minValue > maxRandomTime
 		{
-			warningMsgBox("输入值不能超过1000 ！", "输入值错误！")
+			warningMsgBox("输入值不能超过" maxRandomTime " ！", "输入值错误！")
 			return
 		}
 		myGui.Opt("+OwnDialogs")
@@ -371,9 +370,9 @@ pressTime_Click(GuiCtrlObj, Info)
 				return
 			}
 			maxValue := Integer(maxValue)
-			if maxValue > 1000
+			if maxValue > maxRandomTime
 			{
-				warningMsgBox("输入值不能超过1000 ！", "输入值错误！")
+				warningMsgBox("输入值不能超过" maxRandomTime " ！", "输入值错误！")
 				return
 			}
 			pressTime_Change(minValue, maxValue)
@@ -500,12 +499,11 @@ isEnterKey_Click(GuiCtrlObj, Info)
 	if ctrlValue
 	{
 		inputKeyCtrl.Enabled := false
-		enterKey := enterKeyName
-		if enterKey = inputKey
+		if inputKey = enterKeyName
 			return
-		inputKeyCtrl.Value := enterKey
-		global inputKey := enterKey
-		writeCfg(enterKey, profilesName, selectGame, inputKeyName)
+		inputKeyCtrl.Value := enterKeyName
+		global inputKey := enterKeyName
+		writeCfg(enterKeyName, profilesName, selectGame, inputKeyName)
 	}else
 		inputKeyCtrl.Enabled := true
 }
@@ -534,29 +532,13 @@ startTool()
 	isMoveEditCtrl.Enabled := false
 	isEnterKeyCtrl.Enabled := false
 	; isFullscreenCtrl.Enabled := false
-	;启用热键
-	inputKeyValue := GetKeyName(inputKey)
-	;只有输入键不是Enter才开启输入热键，防止与发送热键重复
-	if (inputKeyValue != enterKeyName)
-	{
-		inputKeyValue := "~" inputKeyValue
-		Hotkey(inputKeyValue, inputKeyCallback, "On")
-		;存储开始输入的热键
-		hotkeysArr.Push(inputKeyValue)
-	}
-	enterHotkey := "~" enterKeyName
-	escHotkey := "~" escKeyName
-	tabHotkey := "~" tabKeyName
-	Hotkey(enterHotkey, sendKeyCallback, "On")
-	Hotkey(escHotkey, escKeyCallback, "On")
-	Hotkey(tabHotkey, tabKeyCallback, "On")
-	;存储其他热键
-	hotkeysArr.Push(enterHotkey, escHotkey, tabHotkey)
+	startCtrl.btnStatus := true
+	;启用开始输入热键
+	changeInputHotkey(true)
 	;延时更新按钮状态
 	SetTimer(enableStopBtn, -1000)
 	enableStopBtn()
 	{
-		startCtrl.btnStatus := true
 		startCtrl.Text := "停止"
 		startCtrl.Opt("+BackgroundRed")
 		startCtrl.Enabled := true
@@ -565,17 +547,13 @@ startTool()
 ;停止
 stopTool()
 {
-	;禁用所有已开启的热键
-	for hotkeyName in hotkeysArr
-	{
-		Hotkey(hotkeyName, "Off")
-	}
-	global hotkeysArr := []
-	;销毁聊天窗口
-	chatGui_Destroy()
-	global gameHwnd := 0	
 	;临时禁用启动按钮
 	startCtrl.Enabled := false
+	startCtrl.btnStatus := false
+	;停用开始输入热键
+	changeInputHotkey(false)
+	;销毁聊天窗口
+	chatGui_Destroy()
 	;延时更新按钮状态
 	SetTimer(enableStartBtn, -1000)
 	enableStartBtn()
@@ -603,20 +581,85 @@ stopTool()
 		startCtrl.Enabled := true
 	}
 }
+;开始输入热键启用与禁用
+changeInputHotkey(isEnable)
+{
+	static inputHotkeysArr := []
+	if isEnable
+	{
+	    keyName := GetKeyName(inputKey)
+	    inputKeyValue := "~" keyName
+		if (keyName = enterKeyName)
+		{
+			Hotkey(inputKeyValue, enterInputKeyCallback, "On")
+		}else
+		{
+			Hotkey(inputKeyValue, inputKeyCallback, "On")
+		}
+		;存储开始输入的热键
+		inputHotkeysArr.Push(inputKeyValue)
+	}else
+	{
+		;禁用所有已开启的输入热键
+		for hotkeyName in inputHotkeysArr
+		{
+			Hotkey(hotkeyName, "Off")
+		}
+		inputHotkeysArr := []
+	}
+}
+;其他热键启用与禁用
+changeOtherHotkey(isEnable)
+{
+	static otherHotkeysArr := []
+	if isEnable
+	{
+		keyName := GetKeyName(inputKey)
+		if (keyName != enterKeyName)
+		{
+			enterHotkey := "~" enterKeyName
+			Hotkey(enterHotkey, sendKeyCallback, "On")
+			otherHotkeysArr.Push(enterHotkey)
+		}
+		escHotkey := "~" escKeyName
+		tabHotkey := "~" tabKeyName
+		Hotkey(escHotkey, escKeyCallback, "On")
+		otherHotkeysArr.Push(escHotkey)
+		Hotkey(tabHotkey, tabKeyCallback, "On")
+		otherHotkeysArr.Push(tabHotkey)
+	}else
+	{
+		;禁用所有已开启的其他热键
+		for hotkeyName in otherHotkeysArr
+		{
+			Hotkey(hotkeyName, "Off")
+		}
+		otherHotkeysArr := []
+	}
+}
+;当开始输入为Enter时的处理
+enterInputKeyCallback(hotkeyName)
+{
+	if chatGui && WinActive(chatGui)
+	{
+		sendKeyCallback(hotkeyName)
+		return
+	}
+	inputKeyCallback(hotkeyName)
+}
 ;开始输入
 inputKeyCallback(hotkeyName)
 {
 	if !WinActive("ahk_exe" processName)
 		return
-	if chatGuiHwnd && GuiFromHwnd(chatGuiHwnd)
+	if chatGui
 	{
-		WinActivate(chatGuiHwnd)
+		WinActivate(chatGui)
 		return
 	}
 	keyName := LTrim(hotkeyName, "~")
 	KeyWait keyName
-	Sleep Random(minDelayTime, maxDelayTime)
-	global gameHwnd := WinExist()
+	Sleep getRandomSleepTime()
 	WinGetClientPos &grwX, &grwY, &grwW, &grwH
 	; WinGetPosEx(gameHwnd, &grwX, &grwY, &grwW, &grwH)
 	if chatPosW > grwW
@@ -642,18 +685,17 @@ inputKeyCallback(hotkeyName)
 		;聊天框标题
 		chatGuiTitle := "鼠标按此拖动、鼠标移动至左右边框调整长度"
 		;+E0x80000选项禁用边框阴影，待验证
-		chatGui := Gui("+ToolWindow +Caption +Resize -SysMenu +Border +AlwaysOnTop -DPIScale +MinSizex" chatGuiH " +MaxSizex" chatGuiH, chatGuiTitle)
+		global chatGui := Gui("+ToolWindow +Caption +Resize -SysMenu +Border +AlwaysOnTop +MinSizex" chatGuiH " +MaxSizex" chatGuiH, chatGuiTitle)
 	}else
 	{
 		;未开启输入框调整模式
-		chatGui := Gui("+ToolWindow -Caption -Resize -SysMenu +Border +AlwaysOnTop -DPIScale", "")
+		global chatGui := Gui("+ToolWindow -Caption -Resize -SysMenu +Border +AlwaysOnTop", "")
 	}
 	; fontSize := chatGuiH // 2
 	chatGui.SetFont("bold s12", "SimHei(黑体)")
 	chatGui.BackColor := "Black"
 	chatGui.MarginX := 0
 	chatGui.MarginY := 0
-	global chatGuiHwnd := chatGui.Hwnd
 	;+WantTab 使得 Tab 键击产生制表符而不是导航到下一个控件。此选项问题待解决
 	chatEdit := chatGui.AddEdit("x0 y0 cWhite BackgroundBlack -Tabstop -WantTab w" chatW-chatGuiCloseW " h" chatGuiH " Limit" chatMaxLength " v" chatEditName)
 	chatClose := chatGui.AddText("x+0 y0 -Tabstop +Center cWhite +BackgroundRed +0x200 w" chatGuiCloseW " h" chatGuiH " v" chatCloseName, "X")
@@ -663,6 +705,8 @@ inputKeyCallback(hotkeyName)
 	;输入框添加相应事件处理
 	chatGui.OnEvent("Size", chatGui_Size)
 	chatClose.OnEvent("Click", chatGui_Close)
+	;启用其他热键
+	changeOtherHotkey(true)
 	; if isFullscreen
 	; {
 	; 	;实验性兼容全屏模式方法：让chatGui成为游戏的子窗口，有些游戏会一直闪烁
@@ -682,14 +726,10 @@ chatGui_Size(GuiObj, MinMax, Width, Height)
 		return
 	if !isMoveEdit
 		return
-	if !GuiObj
-		return
 	chatEdit := GuiObj[chatEditName]
 	chatClose := GuiObj[chatCloseName]
-	if chatEdit
-		chatEdit.Move(, , Width-chatGuiCloseW, Height)
-	if chatClose
-		chatClose.Move(Width-chatGuiCloseW, 0, , Height)
+	chatEdit.Move(, , Width-chatGuiCloseW, Height)
+	chatClose.Move(Width-chatGuiCloseW, 0, , Height)
 }
 ;主动点击聊天框的关闭按钮
 chatGui_Close(GuiCtrlObj, Info)
@@ -699,24 +739,10 @@ chatGui_Close(GuiCtrlObj, Info)
 ;发送文本
 sendKeyCallback(hotkeyName)
 {
-	;处理当开始输入键与发送按键同为Enter时的情况
-	if (inputKey = enterKeyName)
-	{
-		if (!chatGuiHwnd) && WinActive("ahk_exe" processName)
-		{
-			;当游戏激活时，按下Enter执行开始输入事件
-			enterHotKey := "~" enterKeyName
-			inputKeyCallback(enterHotKey)
-			return
-		}
-	}
-	if !chatGuiHwnd
+	if !chatGui
 		return
-	if !gameHwnd
+	if !WinActive(chatGui)
 		return
-	if !WinActive("ahk_id" chatGuiHwnd)
-		return
-	chatGui := GuiFromHwnd(WinExist())
 	chatEdit := chatGui[chatEditName]
 	;兼容在中文输入状态下按Enter键直接输入英文
 	oldChatText := chatEdit.Value
@@ -724,16 +750,16 @@ sendKeyCallback(hotkeyName)
 	chatText := chatEdit.Value
 	if chatText != oldChatText
 		return
-	chatGui_Destroy(chatGui)
-	if !WinExist(gameHwnd)
+	chatGui_Destroy()
+	if !WinExist("ahk_exe" processName)
 		return
 	;默认编辑控件上获取的文本就是UTF-16编码
 	; chatText := getUTF8Str(chatText)
-	SetKeyDelay(Random(minDelayTime, maxDelayTime), Random(minPressTime, maxPressTime))
+	setRandomKeyDelay()
+	WinActivate()
 	if (sendMethod = 2)
 	{
 		;Alt+nnnnn小键盘方法
-		WinActivate
 		if WinWaitActive(, , maxwaitTime)
 		{
 			loop Parse chatText
@@ -742,26 +768,22 @@ sendKeyCallback(hotkeyName)
 				keyName := "{ASC " ascCode "}"
 				SendEvent keyName
 			}
-			SetKeyDelay(Random(minDelayTime, maxDelayTime), Random(minPressTime, maxPressTime))
+			setRandomKeyDelay()
 			SendEvent "{Enter}"
-			global gameHwnd := 0
 		}
 	}else if (sendMethod = 3)
 	{
 		;SendText 方法
-		WinActivate
-		SendText chatText
 		if WinWaitActive(, , maxwaitTime)
 		{
-			SetKeyDelay(Random(minDelayTime, maxDelayTime), Random(minPressTime, maxPressTime))
+			SendText chatText
+			setRandomKeyDelay()
 			SendEvent "{Enter}"
-			global gameHwnd := 0
 		}
 	}else if (sendMethod = 4)
 	{
 		;PostMessage 方法
-		WinActivate
-		waitTime := Random(minDelayTime, maxDelayTime)
+		waitTime := getRandomSleepTime()
 		loop Parse chatText
 		{
 			PostMessage(WM_CHAR := 0x102, ord(A_LoopField))
@@ -769,14 +791,12 @@ sendKeyCallback(hotkeyName)
 		}
 		if WinWaitActive(, , maxwaitTime)
 		{
-			SetKeyDelay(Random(minDelayTime, maxDelayTime), Random(minPressTime, maxPressTime))
+			setRandomKeyDelay()
 			SendEvent "{Enter}"
-			global gameHwnd := 0
 		}
 	}else if (sendMethod = 5)
 	{
 		;复制粘贴方法
-		WinActivate
 		if WinWaitActive(, , maxwaitTime)
 		{
 			;保存原有剪贴板内容，避免粘贴后无法恢复
@@ -784,22 +804,20 @@ sendKeyCallback(hotkeyName)
 			A_Clipboard := chatText
 			ClipWait(maxwaitTime)
 			SendEvent "^v"
-			SetKeyDelay(Random(minDelayTime, maxDelayTime), Random(minPressTime, maxPressTime))
+			setRandomKeyDelay()
 			SendEvent "{Enter}"
 			;发送完，恢复原有剪贴板内容
 			A_Clipboard := clipSaved
-			global gameHwnd := 0
+			clipSaved := "" ;释放内存
 		}
 	}else
 	{
 		;ControlSendText 方法
-		WinActivate
 		ControlSend chatText
 		if WinWaitActive(, , maxwaitTime)
 		{
-			SetKeyDelay(Random(minDelayTime, maxDelayTime), Random(minPressTime, maxPressTime))
+			setRandomKeyDelay()
 			SendEvent "{Enter}"
-			global gameHwnd := 0
 		}
 	}
 }
@@ -839,22 +857,20 @@ getUTF8Str(str)
 ;切换频道
 tabKeyCallback(hotkeyName)
 {
-	if !chatGuiHwnd
+	if !chatGui
 		return
-	if !gameHwnd
-		return
-	if !WinActive("ahk_id" chatGuiHwnd)
+	if !WinActive(chatGui)
 		return
 	KeyWait tabKeyName
-	if !WinExist(gameHwnd)
+	if !WinExist("ahk_exe" processName)
 		return
 	WinActivate()
 	if WinWaitActive(, , maxwaitTime)
 	{
-		SetKeyDelay(Random(minDelayTime, maxDelayTime), Random(minPressTime, maxPressTime))
+		setRandomKeyDelay()
 		SendEvent "{Tab}"
 		KeyWait("Tab", "L T" maxwaitTime)
-		if !WinExist(chatGuiHwnd)
+		if !WinExist(chatGui)
 			return
 		WinActivate()
 		;主动设置键盘焦点到输入框上，暂时不需要
@@ -874,44 +890,34 @@ tabKeyCallback(hotkeyName)
 ;取消输入
 escKeyCallback(hotkeyName)
 {
-	if !chatGuiHwnd
+	if !chatGui
 		return
-	if !WinExist("ahk_id" chatGuiHwnd)
+	if !WinExist(chatGui)
 		return
 	KeyWait escKeyName
-	chatGuiActive := WinActive(chatGuiHwnd)
-	if chatGuiActive && WinExist(gameHwnd)
+	chatGuiActive := WinActive()
+	chatGui_Destroy()
+	if chatGuiActive && WinExist("ahk_exe" processName)
 	{
 		WinActivate()
 		if WinWaitActive(, , maxwaitTime)
 		{
-			SetKeyDelay(Random(minDelayTime, maxDelayTime), Random(minPressTime, maxPressTime))
+			setRandomKeyDelay()
 			SendEvent "{Esc}"
-			global gameHwnd := 0
 		}
 	}
-	chatGui_Destroy()
 }
 ;销毁聊天窗口
 chatGui_Destroy(GuiObj?)
 {
-	if IsSet(GuiObj) && IsObject(GuiObj)
+	;如果存在旧的聊天框，一并销毁
+	if IsSet(GuiObj) && (GuiObj.Hwnd != chatGui.Hwnd)
 	{
-		chatGui := GuiObj
-	}else
-	{
-		if !chatGuiHwnd
-			return
-		chatGui := GuiFromHwnd(chatGuiHwnd)
-		if !chatGui
-		{
-			global chatGuiHwnd := 0
-			return
-		}
+		GuiObj.Destroy()
 	}
-	if isMoveEdit
+	;勾选调整输入框位置大小时，在销毁前保存输入框的X、Y、W的数据
+	if isMoveEdit && chatGui
 	{
-		;勾选调整输入框位置大小时，在销毁前保存输入框的X、Y、W的数据
 		chatGui.GetPos(&chatX, &chatY, &chatW, &chatH)
 		chatGui.GetClientPos(&clientX, &clientY, &clientW, &clientH)
 		global chatPosX := chatX
@@ -921,8 +927,11 @@ chatGui_Destroy(GuiObj?)
 		writeCfg(chatPosY, profilesName, selectGame, chatPosYName)
 		writeCfg(chatPosW, profilesName, selectGame, chatPosWName)
 	}
-	chatGui.Destroy()
-	global chatGuiHwnd := 0
+	;聊天框关闭时禁用其他热键
+	changeOtherHotkey(false)
+	if chatGui
+		chatGui.Destroy()
+	global chatGui := 0
 }
 ;配置文件数据读取并校验
 readCheckCfgData(section?)
@@ -1175,7 +1184,7 @@ declarationMsgBox()
 	
 	GameXueRen 制作
 
-	此工具不涉及游戏文件及内存修改，
+	此工具不涉及游戏文件及内存数据篡改，
 	仅模拟按键操作和使用win系统API实现全流程自动化。
 
 	对于使用此工具，支持游戏输入中文可能导致的后果，
@@ -1224,6 +1233,22 @@ clickExit(*)
 	if IsSet(startCtrl) && startCtrl.btnStatus
 		stopTool()
 	ExitApp
+}
+;设置send延时
+setRandomKeyDelay()
+{
+	delayTime := Random(minDelayTime, maxDelayTime)
+	pressTime := Random(minPressTime, maxPressTime)
+	delayTime := Round(delayTime / 10) * 10
+	pressTime := Round(pressTime / 10) * 10
+	SetKeyDelay(delayTime, pressTime)
+}
+;获取随机的睡眠时间
+getRandomSleepTime()
+{
+	sleepTime := Random(minDelayTime, maxDelayTime)
+	sleepTime := Round(sleepTime / 10) * 10
+	return sleepTime
 }
 ;支持自定义弹出坐标的MsgBox
 MsgBoxAt(x, y, text?, title?, options?)
