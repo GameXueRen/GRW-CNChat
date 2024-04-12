@@ -75,10 +75,10 @@ creatMyGuiControl()
 myGui.Show("xCenter yCenter w" myGuiW "h" myGuiH)
 ;强制刷新控件的值
 reloadControlValue(true)
+;添加控件提示
+addMyGuiControlTip()
 ;添加控件事件
 addMyGuiControlEvent()
-;当鼠标移动到特定的控件上时显示相关帮助，有需求时再加
-; OnMessage(0x200, On_WM_MOUSEMOVE)
 
 ;托盘右键菜单定制
 A_TrayMenu.Delete()
@@ -147,16 +147,6 @@ creatMyGuiControl()
 	myGui.AddText("+0x200 x+" myGuiMarginX " yp w" keyNameW " hp", escKeyName)
 	myGui.AddText("+0x200 xs+" myGuiMarginX " y+" textCtrlMarginY " w" leftKeyNameW " hp", "切换频道：")
 	myGui.AddText("+0x200 x+" myGuiMarginX " yp w" keyNameW " hp", tabKeyName)
-	;设置每个控件的提示，有需求时再加
-	; selectGameCtrl.ToolTip := "选择已存储及内置的游戏配置项"
-	; addGameCtrl.ToolTip := "添加游戏配置项：`n依次输入“游戏名称”及“游戏窗口对应的程序完整名称”"
-	; sendMethodCtrl.ToolTip := "每个游戏适用的发送方式不一样：`n针对不同游戏可依次调试出最佳方式"
-	; delayTimeCtrl.ToolTip := "设置工具模拟按键的保持时间：`n每个游戏接受程度不一样，择机调试出最佳延时"
-	; pressTimeCtrl.ToolTip := "设置工具模拟按键操作前的延时：`n每个游戏接受程度不一样，择机调试出最佳延时"
-	; isMoveEditCtrl.ToolTip := "如果勾选后再启动：`n游戏内可自由调整输入框位置及宽度"
-	; startCtrl.ToolTip := "确保游戏为“无边框”或“窗口化”模式，启动之后才可正常使用`n暂不兼容游戏全屏模式"
-	; inputKeyCtrl.ToolTip := "配置开始输入的按键：`n需与游戏内的按键配置一致"
-	; isEnterKeyCtrl.ToolTip := "勾选后即配置“开始聊天”按键为Enter(回车)键"
 }
 ;添加控件触发事件
 addMyGuiControlEvent()
@@ -181,27 +171,83 @@ addMyGuiControlEvent()
 	;退出之前保存输入框位置
 	OnExit(exitCallback(*) => saveChatGuiPos(false))
 }
-;控件提示显示，有需求时再加
-/*
-On_WM_MOUSEMOVE(wParam, lParam, msg, Hwnd)
+;添加控件提示
+addMyGuiControlTip()
 {
-    static PrevHwnd := 0
-    if (Hwnd != PrevHwnd)
-    {
-        Text := "", ToolTip() ; 关闭之前的工具提示.
-        CurrControl := GuiCtrlFromHwnd(Hwnd)
-        if CurrControl
-        {
-            if !CurrControl.HasProp("ToolTip")
-                return ; 此控件没有工具提示.
-            Text := CurrControl.ToolTip
-            SetTimer () => ToolTip(Text), -1000
-            SetTimer () => ToolTip(), -4000 ; 移除工具提示.
-        }
-        PrevHwnd := Hwnd
-    }
+	; 设置每个控件的提示
+	addGameCtrl.gmxrTip := "添加新的游戏支持"
+	deleteGameCtrl.gmxrTip := "删除手动添加的游戏配置项：`n内置的配置项暂不允许删除"
+	sendMethodCtrl.gmxrTip := "不同游戏适用的发送方式不一样`n可选择不同方式进行调试"
+	pressTimeCtrl.gmxrTip := "设置工具模拟按键的保持时间：`n不同游戏适用的延时不一样`n可设置适当延时进行调试`n延时设置范围：" minRandomTime "~" maxRandomTime
+	delayTimeCtrl.gmxrTip := "设置工具模拟操作后的延时：`n不同游戏适用的延时不一样`n可设置适当延时进行调试`n延时设置范围：" minRandomTime "~" maxRandomTime
+	isMoveEditCtrl.gmxrTip := "如果勾选后再启动：`n游戏内可调整输入框位置及宽高`n并保存到下次显示"
+	startCtrl.gmxrTip := "确保游戏为“无边框”或“窗口化”模式`n启动之后才可正常使用"
+	inputKeyCtrl.gmxrTip := "配置开始输入的按键：`n需与游戏内的按键配置一致`n才可同步打开游戏内聊天框"
+	isEnterKeyCtrl.gmxrTip := "勾选后即配置：`n“开始输入”按键为“Enter”键"
+	manualSendCtrl.gmxrTip := "手动输入文字并发送到：`n对应窗口内的“输入光标处”`n适用一些非聊天场景"
+	;读取是否显示提示信息配置项
+	showTipName := "显示提示"
+	readShowTip := IniRead(profilesName, mainConfigName, showTipName, "")
+	if readShowTip
+		readShowTip := true
+	else
+		readShowTip := false
+	global isShowMyGuiTip := readShowTip
+	if !isShowMyGuiTip
+		return
+	openMyGuiTip(true)
+	myGui.OnEvent("Size", myGui_Size)
+	;主界面最小化、最大化触发事件
+	myGui_Size(GuiObj, MinMax, *)
+	{
+		if MinMax = -1
+			openMyGuiTip(false)
+		else
+			openMyGuiTip(true)
+	}
 }
-*/
+; 当鼠标移动到特定的控件上时显示对应提示
+;采用定时器的方式相比OnMessage监控全局鼠标移动方法，影响更小。
+;实现效果：鼠标悬停在指定控件上500~1500毫秒后，显示提示，最多保持10秒显示。
+;当工具停止/显示或启动/最小化时自动开启与关闭定时器
+openMyGuiTip(state)
+{
+	if !isShowMyGuiTip or startCtrl.btnStatus
+		state := false
+	static isOpen := false
+	if state = isOpen
+		return
+	isOpen := state
+	if !isOpen
+		return
+	myGuiHwnd := myGui.Hwnd
+	SetTimer(showMyGuiTip, 1000)
+	showMyGuiTip()
+	{
+	    static tipHwnd := 0
+		if !isOpen
+		{
+			if tipHwnd
+				tipHwnd := ToolTip()
+			SetTimer(, 0)
+			return
+		}
+		if (A_TimeIdleMouse < 500) or (A_TimeIdleMouse > 10000)
+		{
+			if tipHwnd
+				tipHwnd := ToolTip()
+			return
+		}
+		if tipHwnd
+			return
+		MouseGetPos(, , &guiId, &ctrlId, 3)
+		if (!ctrlId) or (guiId != myGuiHwnd)
+			return
+		CurrControl := GuiCtrlFromHwnd(ctrlId)
+		if CurrControl && CurrControl.HasProp("gmxrTip") && CurrControl.Enabled && isOpen
+			tipHwnd := ToolTip(CurrControl.gmxrTip)
+	}
+}
 ;写入配置文件
 writeCfg(Value, Filename, Section, Key)
 {
@@ -588,6 +634,7 @@ startTool()
 	isEnterKeyCtrl.Enabled := false
 	; isFullscreenCtrl.Enabled := false
 	startCtrl.btnStatus := true
+	openMyGuiTip(false)
 	;启用开始输入热键
 	changeInputHotkey(true)
 	;延时更新按钮状态
@@ -605,6 +652,7 @@ stopTool()
 	;临时禁用启动按钮
 	startCtrl.Enabled := false
 	startCtrl.btnStatus := false
+	openMyGuiTip(true)
 	;停用开始输入热键
 	changeInputHotkey(false)
 	;销毁聊天窗口
@@ -1399,6 +1447,7 @@ defaultGameCfg()
 输入框最大字符数=88
 延时最大值=1000
 启动声明=1
+显示提示=1
 
 [幽灵行动：荒野]
 运行程序=GRW.exe
