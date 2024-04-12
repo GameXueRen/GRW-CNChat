@@ -125,7 +125,8 @@ creatMyGuiControl()
 	startCtrl.SetFont("s24 cDefault")
 	global aboutCtrl := myGui.AddButton("x+" myGuiMarginX " yp w" aboutCtrlW " h" aboutCtrlH, "关`n`n于")
 	global readmeCtrl := myGui.AddButton("xp ys+" inputKeyBoxH-myGuiMarginY-aboutCtrlH " w" aboutCtrlW " h" aboutCtrlH, "说`n`n明")
-	global isMoveEditCtrl := myGui.AddCheckbox("ys-6 w132 h20 Checked0 xs+" myGuiMarginX, "调整输入框位置大小")
+	global manualSendCtrl := myGui.AddButton("x+-62 ys-8 w62 h22", "手动发送")
+	global isMoveEditCtrl := myGui.AddCheckbox("ys-6 w80 h20 Checked0 xs+" myGuiMarginX, "调整输入框")
 	;添加自定义属性，存储启动按钮的启停状态
 	startCtrl.btnStatus := false
 	;兼容全屏模式下的中文输入，会触发诸多BUG，无力解决，计划取消
@@ -165,6 +166,7 @@ addMyGuiControlEvent()
 	addGameCtrl.OnEvent("Click", addGame_Click)
 	deleteGameCtrl.OnEvent("Click", deleteGame_Click)
 	isMoveEditCtrl.OnEvent("Click", isMoveEdit_Click)
+	manualSendCtrl.OnEvent("Click", manualSend_Click)
 	inputKeyCtrl.OnEvent("Change", inputKey_Change)
 	isEnterKeyCtrl.OnEvent("Click", isEnterKey_Click)
 	; isFullscreenCtrl.OnEvent("Click", isFullscreen_Click)
@@ -461,6 +463,64 @@ isMoveEdit_Click(GuiCtrlObj, Info)
 	if ctrlValue = -1
 		return
 	global isMoveEdit := ctrlValue
+}
+;“手动发送”点击事件
+manualSend_Click(GuiCtrlObj, Info)
+{
+	myGui.Opt("+OwnDialogs")
+	myGui.GetPos(&myGuiX, &myGuiY)
+	inputBoxW := myGuiW-32
+	inputBoxH := 126
+	inputBoxX := myGuiX + (myGuiW - inputBoxW) / 2
+	inputBoxY := myGuiY + (myGuiH - inputBoxH) / 2
+	manualSendBox := InputBox("此处输入文字，点击确定即发送到`n" processName "`n窗口内的输入光标处", "手动发送文字到游戏窗口", "x" inputBoxX " y" inputBoxY " w" inputBoxW " h" inputBoxH)
+	if manualSendBox.Result = "OK"
+	{
+		chatText := manualSendBox.Value
+		if !chatText
+			return
+		if !WinExist("ahk_exe" processName)
+		{
+			warningMsgBox(processName "`n窗口不存在！")
+			return
+		}
+		setRandomKeyDelay()
+		WinActivate()
+		if WinWaitActive(, , maxwaitTime)
+		{
+			if (sendMethod = 2)
+			{
+				loop Parse chatText
+				{
+					ascCode := getGBKCode(A_LoopField)
+					keyName := "{ASC " ascCode "}"
+					SendEvent keyName
+				}
+			}else if (sendMethod = 3)
+			{
+				SendText chatText
+			}else if (sendMethod = 4)
+			{
+				waitTime := getRandomSleepTime()
+				loop Parse chatText
+				{
+					PostMessage(WM_CHAR := 0x102, ord(A_LoopField))
+					Sleep waitTime
+				}
+			}else if (sendMethod = 5)
+			{
+				clipSaved := ClipboardAll()
+				A_Clipboard := chatText
+				ClipWait(maxwaitTime)
+				SendEvent "^v"
+				A_Clipboard := clipSaved
+				clipSaved := ""
+			}else
+			{
+				ControlSend chatText
+			}
+		}
+	}
 }
 /*
 ;兼容全屏开启与关闭处理，处理起来有诸多BUG，暂时取消
