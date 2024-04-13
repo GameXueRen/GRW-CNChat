@@ -91,6 +91,8 @@ A_IconTip := "游戏无缝输入中文" toolVersion
 
 ;启动声明
 declarationMsgBox()
+;设置主界面输入焦点
+setMyGuiFocus()
 
 ;创建主界面上的控件
 creatMyGuiControl()
@@ -276,6 +278,7 @@ selectGame_Change(GuiCtrlObj, Info)
 ;添加游戏
 addGame_Click(GuiCtrlObj, Info)
 {
+	setMyGuiFocus()
 	myGui.Opt("+OwnDialogs")
 	myGui.GetPos(&myGuiX, &myGuiY)
 	inputBoxW := 200	;弹出的输入框宽度
@@ -331,6 +334,7 @@ addGame_Click(GuiCtrlObj, Info)
 ;删除游戏
 deleteGame_Click(GuiCtrlObj, Info)
 {
+	setMyGuiFocus()
 	deleteGame := selectGameCtrl.Text
 	myGui.Opt("+OwnDialogs")
 	result := warningMsgBox("是否要删除此游戏的配置？`n" deleteGame "（" exeNameCtrl.Text "）", "删除游戏配置", "OKCancel Icon! Default2")
@@ -369,6 +373,7 @@ sendMethod_Change(GuiCtrlObj, Info)
 ;键击随机延时改变
 pressTime_Click(GuiCtrlObj, Info)
 {
+	setMyGuiFocus()
 	myGui.Opt("+OwnDialogs")
 	myGui.GetPos(&myGuiX, &myGuiY)
 	inputBoxW := 180
@@ -429,6 +434,7 @@ pressTime_Click(GuiCtrlObj, Info)
 ;操作随机延时改变
 delayTime_Click(GuiCtrlObj, Info)
 {
+	setMyGuiFocus()
 	myGui.Opt("+OwnDialogs")
 	myGui.GetPos(&myGuiX, &myGuiY)
 	inputBoxW := 180
@@ -513,6 +519,7 @@ isMoveEdit_Click(GuiCtrlObj, Info)
 ;“手动发送”点击事件
 manualSend_Click(GuiCtrlObj, Info)
 {
+	setMyGuiFocus()
 	myGui.Opt("+OwnDialogs")
 	myGui.GetPos(&myGuiX, &myGuiY)
 	inputBoxW := myGuiW-32
@@ -644,6 +651,7 @@ startTool()
 		startCtrl.Text := "停止"
 		startCtrl.Opt("+BackgroundRed")
 		startCtrl.Enabled := true
+		setMyGuiFocus(true)
 	}
 }
 ;停止
@@ -681,6 +689,7 @@ stopTool()
 		startCtrl.Text := "启动"
 		startCtrl.Opt("+BackgroundDefault")
 		startCtrl.Enabled := true
+		setMyGuiFocus(false)
 	}
 }
 ;开始输入热键启用与禁用
@@ -1362,6 +1371,27 @@ https://github.com/GameXueRen/GRW-CNChat
 	else
 		return
 }
+;取消其他按钮的输入焦点蓝边框的临时解决方案
+setMyGuiFocus(isCancel?)
+{
+	static focusHiddenCtrl := myGui.AddButton("x0 y0 w1 h1 Hidden")
+	if startCtrl.btnStatus
+	{
+		focusHiddenCtrl.Focus()
+		return
+	}
+	if IsSet(isCancel)
+	{
+		if isCancel
+			focusHiddenCtrl.Focus()
+		else
+		{
+			focusHiddenCtrl.Focus()
+			startCtrl.Focus()
+		}
+	}else
+		startCtrl.Focus()
+}
 ;设置send延时
 setRandomKeyDelay()
 {
@@ -1531,6 +1561,7 @@ defaultGameCfg()
 ;关于
 clickAbout(*)
 {
+	setMyGuiFocus()
 	MsgBox "游戏无缝输入中文" toolVersion "
 	(
 
@@ -1563,6 +1594,7 @@ https://github.com/GameXueRen/GRW-CNChat
 ;使用说明
 clickReadme(*)
 {
+	setMyGuiFocus()
 	MsgBox "
 	(
 1、进入游戏画面，并确保为“无边框模式”或“窗口化”。
