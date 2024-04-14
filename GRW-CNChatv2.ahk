@@ -2,7 +2,7 @@
 ;强制使用键盘钩子来实现热键
 #UseHook true
 ;版本号
-toolVersion := "v2.3"
+toolVersion := "v2.4.1"
 ;设置速度最快的WinTitle匹配模式
 SetTitleMatchMode 3
 SetTitleMatchMode "Fast"
@@ -66,7 +66,6 @@ myGuiMarginY := 8
 readCheckCfgData()
 ;创建主界面
 myGui := Gui("-Resize -MaximizeBox", "游戏无缝输入中文" toolVersion)
-myGui.SetFont(, "SimSun(宋体)")
 myGui.MarginX := myGuiMarginX
 myGui.MarginY := myGuiMarginY
 ;创建控件
@@ -104,7 +103,7 @@ creatMyGuiControl()
 	myGui.AddGroupBox("Section w" myGuiW - myGuiMarginX * 2 " h" selectGameBoxH, selectGameName)
 	selectGameCtrlW := myGuiW - myGuiMarginX * 6 - deleteGameCtrlW * 2
 	global selectGameCtrl := myGui.AddDropDownList("xp+" myGuiMarginX " yp+" ddlCtrlMarginTop " w" selectGameCtrlW)
-	global exeNameCtrl := myGui.AddText("xp r1 cRed wp y+2")
+	global exeNameCtrl := myGui.AddText("+0x200 xp r1 cRed wp y+2")
 	global addGameCtrl := myGui.AddButton("x+" myGuiMarginX " y" myGuiMarginY + ddlCtrlMarginTop " w" deleteGameCtrlW " h" selectGameBoxH - ddlCtrlMarginTop - myGuiMarginY, "添加")
 	global deleteGameCtrl := myGui.AddButton("yp wp hp x+" myGuiMarginX, "删除")
 	;发送文本方式、键击延时、操作延时
@@ -113,7 +112,7 @@ creatMyGuiControl()
 	sendMethodCtrlW := myGuiW - myGuiMarginX * 6 - delayTimeCtrlW * 2
 	myGui.AddGroupBox("Section xs ys+" selectGameBoxH + myGuiMarginY " w" myGuiW - myGuiMarginX * 2 " h" sendMethodBoxH, sendMethodName)
 	global sendMethodCtrl := myGui.AddDropDownList("xp+" myGuiMarginX " yp+" ddlCtrlMarginTop " w" sendMethodCtrlW, sendMethodArr)
-	global sendMethodNameCtrl := myGui.AddText("xp r1 cRed wp y+2")
+	global sendMethodNameCtrl := myGui.AddText("+0x200 xp r1 cRed wp y+2")
 	global pressTimeCtrl := myGui.AddButton("x+" myGuiMarginX " ys+" ddlCtrlMarginTop " w" delayTimeCtrlW " h" sendMethodBoxH - ddlCtrlMarginTop - myGuiMarginY)
 	global delayTimeCtrl := myGui.AddButton("yp wp hp x+" myGuiMarginX)
 	;启动、输入框调整模式、关于、说明
@@ -124,7 +123,7 @@ creatMyGuiControl()
 	startBoxW := sendMethodCtrlW+myGuiMarginX
 	myGui.AddGroupBox("Section xs ys+" sendMethodBoxH + myGuiMarginY " w" startBoxW " h" inputKeyBoxH, "")
 	global startCtrl := myGui.AddButton("xp+" myGuiMarginX " yp+" ddlCtrlMarginTop " w" startBoxW - myGuiMarginX * 3 - aboutCtrlW " h" inputKeyBoxH - ddlCtrlMarginTop - myGuiMarginY, "启动")
-	startCtrl.SetFont("s24 cDefault")
+	startCtrl.SetFont("s24")
 	global aboutCtrl := myGui.AddButton("x+" myGuiMarginX " yp w" aboutCtrlW " h" aboutCtrlH, "关`n`n于")
 	global readmeCtrl := myGui.AddButton("xp ys+" inputKeyBoxH-myGuiMarginY-aboutCtrlH " w" aboutCtrlW " h" aboutCtrlH, "说`n`n明")
 	global manualSendCtrl := myGui.AddButton("x+-62 ys-8 w62 h22", "手动发送")
@@ -805,7 +804,7 @@ inputKeyCallback(hotkeyName)
 		;未开启输入框调整模式
 		global chatGui := Gui("+ToolWindow -Caption -Resize -SysMenu +Border +AlwaysOnTop", "")
 	}
-	chatGui.SetFont("bold s" chatFontSize, "SimHei(黑体)")
+	chatGui.SetFont("bold s" chatFontSize)
 	chatGui.BackColor := "Black"
 	chatGui.MarginX := 0
 	chatGui.MarginY := 0
@@ -1589,7 +1588,13 @@ https://github.com/GameXueRen/GRW-CNChat
 修复已知BUG，重新设计界面布局。
 正式版v2.3（2024/03/25）：
 修复已知BUG，正式发布！
-	)", "关于"
+正式版v2.4（2024/04/11）：
+优化热键逻辑，支持调整输入框高度。
+添加“手动发送”，来适用非聊天场景。
+添加界面提示，内置“无人深空”游戏支持。
+正式版v2.4.1（2024/04/13）：
+修复已知BUG。
+)", "关于"
 }
 ;使用说明
 clickReadme(*)
