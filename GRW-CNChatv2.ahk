@@ -175,79 +175,21 @@ addMyGuiControlEvent()
 ;添加控件提示
 addMyGuiControlTip()
 {
-	; 设置每个控件的提示
-	addGameCtrl.gmxrTip := "添加新的游戏支持"
-	deleteGameCtrl.gmxrTip := "删除手动添加的游戏配置项：`n内置的配置项暂不允许删除"
-	sendMethodCtrl.gmxrTip := "不同游戏适用的发送方式不一样`n可选择不同方式进行调试"
-	pressTimeCtrl.gmxrTip := "设置工具模拟按键的保持时间：`n不同游戏适用的延时不一样`n可设置适当延时进行调试`n延时设置范围：" minRandomTime "~" maxRandomTime
-	delayTimeCtrl.gmxrTip := "设置工具模拟操作后的延时：`n不同游戏适用的延时不一样`n可设置适当延时进行调试`n延时设置范围：" minRandomTime "~" maxRandomTime
-	isMoveEditCtrl.gmxrTip := "如果勾选后再启动：`n游戏内可调整输入框位置及宽高`n并保存到下次显示"
-	startCtrl.gmxrTip := "确保游戏为“无边框”或“窗口化”模式`n启动之后才可正常使用"
-	inputKeyCtrl.gmxrTip := "配置开始输入的按键：`n需与游戏内的按键配置一致`n才可同步打开游戏内聊天框"
-	isEnterKeyCtrl.gmxrTip := "勾选后即配置：`n“开始输入”按键为“Enter”键"
-	manualSendCtrl.gmxrTip := "手动输入文字并发送到：`n对应窗口内的“输入光标处”`n适用一些非聊天场景"
 	;读取是否显示提示信息配置项
-	showTipName := "显示提示"
-	readShowTip := IniRead(profilesName, mainConfigName, showTipName, "")
-	if readShowTip
-		readShowTip := true
-	else
-		readShowTip := false
-	global isShowMyGuiTip := readShowTip
-	if !isShowMyGuiTip
+	readShowTip := IniRead(profilesName, mainConfigName, "显示提示", "")
+	if !readShowTip
 		return
-	openMyGuiTip(true)
-	myGui.OnEvent("Size", myGui_Size)
-	;主界面最小化、最大化触发事件
-	myGui_Size(GuiObj, MinMax, *)
-	{
-		if MinMax = -1
-			openMyGuiTip(false)
-		else
-			openMyGuiTip(true)
-	}
-}
-; 当鼠标移动到特定的控件上时显示对应提示
-;采用定时器的方式相比OnMessage监控全局鼠标移动方法，影响更小。
-;实现效果：鼠标悬停在指定控件上500~1500毫秒后，显示提示，最多保持10秒显示。
-;当工具停止/显示或启动/最小化时自动开启与关闭定时器
-openMyGuiTip(state)
-{
-	if !isShowMyGuiTip or startCtrl.btnStatus
-		state := false
-	static isOpen := false
-	if state = isOpen
-		return
-	isOpen := state
-	if !isOpen
-		return
-	myGuiHwnd := myGui.Hwnd
-	SetTimer(showMyGuiTip, 1000)
-	showMyGuiTip()
-	{
-	    static tipHwnd := 0
-		if !isOpen
-		{
-			if tipHwnd
-				tipHwnd := ToolTip()
-			SetTimer(, 0)
-			return
-		}
-		if (A_TimeIdleMouse < 500) or (A_TimeIdleMouse > 10000)
-		{
-			if tipHwnd
-				tipHwnd := ToolTip()
-			return
-		}
-		if tipHwnd
-			return
-		MouseGetPos(, , &guiId, &ctrlId, 3)
-		if (!ctrlId) or (guiId != myGuiHwnd)
-			return
-		CurrControl := GuiCtrlFromHwnd(ctrlId)
-		if CurrControl && CurrControl.HasProp("gmxrTip") && CurrControl.Enabled && isOpen
-			tipHwnd := ToolTip(CurrControl.gmxrTip)
-	}
+	ControlAddTip(addGameCtrl, "添加新的游戏支持")
+	ControlAddTip(deleteGameCtrl, "删除手动添加的游戏配置项：`n内置的配置项暂不允许删除")
+	ControlAddTip(sendMethodCtrl, "不同游戏适用的发送方式不一样`n可选择不同方式进行调试")
+	ControlAddTip(pressTimeCtrl, "设置工具模拟按键的保持时间：`n不同游戏适用的延时不一样`n可设置适当延时进行调试`n延时设置范围：" minRandomTime "~" maxRandomTime)
+	ControlAddTip(delayTimeCtrl, "设置工具模拟操作后的延时：`n不同游戏适用的延时不一样`n可设置适当延时进行调试`n延时设置范围：" minRandomTime "~" maxRandomTime)
+	ControlAddTip(isMoveEditCtrl, "如果勾选后再启动：`n游戏内可调整输入框位置及宽高`n并保存到下次显示")
+	ControlAddTip(startCtrl, "确保游戏为“无边框”或“窗口化”模式`n(暂不兼容游戏全屏模式)`n启动之后才可正常使用")
+	ControlAddTip(inputKeyCtrl, "配置开始输入的按键：`n需与游戏内的按键配置一致`n才可同步打开游戏内聊天框")
+	ControlAddTip(isEnterKeyCtrl, "勾选后即配置：`n“开始输入”按键为“Enter”键")
+	ControlAddTip(manualSendCtrl, "手动输入文字并发送到：`n对应窗口内的“输入光标处”`n适用一些非聊天场景")
+	GuiSetTipDelayTime(myGui, 1000)
 }
 ;写入配置文件
 writeCfg(Value, Filename, Section, Key)
@@ -540,36 +482,33 @@ manualSend_Click(GuiCtrlObj, Info)
 		WinActivate()
 		if WinWaitActive(, , maxwaitTime)
 		{
-			if (sendMethod = 2)
+			switch sendMethod
 			{
-				loop Parse chatText
-				{
-					ascCode := getGBKCode(A_LoopField)
-					keyName := "{ASC " ascCode "}"
-					SendEvent keyName
-				}
-			}else if (sendMethod = 3)
-			{
-				SendText chatText
-			}else if (sendMethod = 4)
-			{
-				waitTime := getRandomSleepTime()
-				loop Parse chatText
-				{
-					PostMessage(WM_CHAR := 0x102, ord(A_LoopField))
-					Sleep waitTime
-				}
-			}else if (sendMethod = 5)
-			{
-				clipSaved := ClipboardAll()
-				A_Clipboard := chatText
-				ClipWait(maxwaitTime)
-				SendEvent "^v"
-				A_Clipboard := clipSaved
-				clipSaved := ""
-			}else
-			{
-				ControlSend chatText
+				case 2:
+					loop Parse chatText
+					{
+						ascCode := getGBKCode(A_LoopField)
+						keyName := "{ASC " ascCode "}"
+						SendEvent keyName
+					}
+				case 3:
+					SendText chatText
+				case 4:
+					waitTime := getRandomSleepTime()
+					loop Parse chatText
+					{
+						PostMessage(WM_CHAR := 0x102, ord(A_LoopField))
+						Sleep waitTime
+					}
+				case 5:
+					clipSaved := ClipboardAll()
+					A_Clipboard := chatText
+					ClipWait(maxwaitTime)
+					SendEvent "^v"
+					A_Clipboard := clipSaved
+					clipSaved := ""
+				default:
+					ControlSend chatText
 			}
 		}
 	}
@@ -640,7 +579,7 @@ startTool()
 	isEnterKeyCtrl.Enabled := false
 	; isFullscreenCtrl.Enabled := false
 	startCtrl.btnStatus := true
-	openMyGuiTip(false)
+	GuiSetTipEnabled(myGui, false)
 	;启用开始输入热键
 	changeInputHotkey(true)
 	;延时更新按钮状态
@@ -659,7 +598,6 @@ stopTool()
 	;临时禁用启动按钮
 	startCtrl.Enabled := false
 	startCtrl.btnStatus := false
-	openMyGuiTip(true)
 	;停用开始输入热键
 	changeInputHotkey(false)
 	;销毁聊天窗口
@@ -688,6 +626,7 @@ stopTool()
 		startCtrl.Text := "启动"
 		startCtrl.Opt("+BackgroundDefault")
 		startCtrl.Enabled := true
+		GuiSetTipEnabled(myGui, true)
 		setMyGuiFocus(false)
 	}
 }
@@ -893,68 +832,65 @@ sendKeyCallback(hotkeyName)
 	; chatText := getUTF8Str(chatText)
 	setRandomKeyDelay()
 	WinActivate()
-	if (sendMethod = 2)
+	switch sendMethod
 	{
-		;Alt+nnnnn小键盘方法
-		if WinWaitActive(, , maxwaitTime)
-		{
+		case 2:
+			;Alt+nnnnn小键盘方法
+			if WinWaitActive(, , maxwaitTime)
+			{
+				loop Parse chatText
+				{
+					ascCode := getGBKCode(A_LoopField)
+					keyName := "{ASC " ascCode "}"
+					SendEvent keyName
+				}
+				setRandomKeyDelay()
+				SendEvent "{Enter}"
+			}
+		case 3:
+			;SendText 方法
+			if WinWaitActive(, , maxwaitTime)
+			{
+				SendText chatText
+				setRandomKeyDelay()
+				SendEvent "{Enter}"
+			}
+		case 4:
+			;PostMessage 方法
+			waitTime := getRandomSleepTime()
 			loop Parse chatText
 			{
-				ascCode := getGBKCode(A_LoopField)
-				keyName := "{ASC " ascCode "}"
-				SendEvent keyName
+				PostMessage(WM_CHAR := 0x102, ord(A_LoopField))
+				Sleep waitTime
 			}
-			setRandomKeyDelay()
-			SendEvent "{Enter}"
-		}
-	}else if (sendMethod = 3)
-	{
-		;SendText 方法
-		if WinWaitActive(, , maxwaitTime)
-		{
-			SendText chatText
-			setRandomKeyDelay()
-			SendEvent "{Enter}"
-		}
-	}else if (sendMethod = 4)
-	{
-		;PostMessage 方法
-		waitTime := getRandomSleepTime()
-		loop Parse chatText
-		{
-			PostMessage(WM_CHAR := 0x102, ord(A_LoopField))
-			Sleep waitTime
-		}
-		if WinWaitActive(, , maxwaitTime)
-		{
-			setRandomKeyDelay()
-			SendEvent "{Enter}"
-		}
-	}else if (sendMethod = 5)
-	{
-		;复制粘贴方法
-		if WinWaitActive(, , maxwaitTime)
-		{
-			;保存原有剪贴板内容，避免粘贴后无法恢复
-			clipSaved := ClipboardAll()
-			A_Clipboard := chatText
-			ClipWait(maxwaitTime)
-			SendEvent "^v"
-			setRandomKeyDelay()
-			SendEvent "{Enter}"
-			;发送完，恢复原有剪贴板内容
-			A_Clipboard := clipSaved
-			clipSaved := "" ;释放内存
-		}
-	}else
-	{
-		;ControlSendText 方法
-		ControlSend chatText
-		if WinWaitActive(, , maxwaitTime)
-		{
-			setRandomKeyDelay()
-			SendEvent "{Enter}"
-		}
+			if WinWaitActive(, , maxwaitTime)
+			{
+				setRandomKeyDelay()
+				SendEvent "{Enter}"
+			}
+		case 5:
+			;复制粘贴方法
+			if WinWaitActive(, , maxwaitTime)
+			{
+				;保存原有剪贴板内容，避免粘贴后无法恢复
+				clipSaved := ClipboardAll()
+				A_Clipboard := chatText
+				ClipWait(maxwaitTime)
+				SendEvent "^v"
+				setRandomKeyDelay()
+				SendEvent "{Enter}"
+				;发送完，恢复原有剪贴板内容
+				A_Clipboard := clipSaved
+				clipSaved := "" ;释放内存
+			}
+		default:
+			;ControlSendText 方法
+			ControlSend chatText
+			if WinWaitActive(, , maxwaitTime)
+			{
+				setRandomKeyDelay()
+				SendEvent "{Enter}"
+			}
 	}
 }
 ;获取单个字符的GBK编码
@@ -1448,6 +1384,133 @@ WinGetPosEx(hwnd, &x?, &y?, &w?, &h?)
     }
 }
 */
+;向GuiControl添加、更新、删除工具提示
+;Tooltip文档：https://learn.microsoft.com/zh-cn/windows/win32/controls/tooltip-control-reference
+ControlAddTip(GuiCtrlObj, TipText)
+{
+	if !(GuiCtrlObj is Gui.Control)
+		return 0
+	currGui := GuiCtrlObj.Gui
+	guiHwnd := currGui.Hwnd
+	ctrlHwnd := GuiCtrlObj.Hwnd
+	if currGui.HasProp("gmxrTipHwnd")
+		tipHwnd := currGui.gmxrTipHwnd
+	else
+		tipHwnd := 0
+	if !tipHwnd
+	{
+		;初始化创建工具提示，并返回窗口句柄
+		CW_USEDEFAULT := 0x80000000
+		tipHwnd := DllCall("CreateWindowEx"
+			, "UInt", 0                      			  ;-- dwExStyle WS_EX_TOPMOST := 0x8
+			, "Str", "TOOLTIPS_CLASS32"                   ;-- lpClassName
+			, "Ptr", 0                                    ;-- lpWindowName
+			, "UInt", 0x1 | 0x2        					  ;-- dwStyle TTS_ALWAYSTIP | TTS_NOPREFIX
+			, "UInt", CW_USEDEFAULT                       ;-- x
+			, "UInt", CW_USEDEFAULT                       ;-- y
+			, "UInt", CW_USEDEFAULT                       ;-- nWidth
+			, "UInt", CW_USEDEFAULT                       ;-- nHeight
+			, "Ptr", guiHwnd                              ;-- hWndParent
+			, "Ptr", 0                                    ;-- hMenu
+			, "Ptr", 0                                    ;-- hInstance
+			, "Ptr", 0                                    ;-- lpParam
+			, "Ptr")                                      ;-- Return type
+		currGui.gmxrTipHwnd := tipHwnd
+		;设置工具提示支持多行显示，且最大宽度为屏幕宽度
+		SendMessage 0x0418, 0, A_ScreenWidth*96//A_ScreenDPI, tipHwnd ;TTM_SETMAXTIPWIDTH
+	}
+	cbSize := 24 + (A_PtrSize * 6)
+	TOOLINFO := Buffer(cbSize, 0)
+	; cbSize
+	; uFlags：TTF_SUBCLASS | TTF_IDISHWND (0x10 | 0x1).将鼠标信息转发给控制器、uId参数为Hwnd
+	; hwnd, uID
+	NumPut("UInt", cbSize, "UInt", 0x11, "Ptr", guiHwnd, "Ptr", ctrlHwnd, TOOLINFO)
+	;查询工具提示中是否已注册该控件
+	try
+		isRegister := SendMessage(0x435, 0, TOOLINFO, tipHwnd) ;TTM_GETTOOLINFOW
+	catch Error
+		isRegister := false
+	;向控件添加、更新或删除工具提示
+	if TipText
+	{
+		;填充工具提示文本到 TOOLINFO
+		NumPut("Ptr", StrPtr(TipText), TOOLINFO, 24 + (A_PtrSize * 3))
+		;文本不为空，如果控件已注册则更新提示，否则添加注册
+		if isRegister
+			SendMessage(0x0439, 0, TOOLINFO, tipHwnd) ;TTM_UPDATETIPTEXTW
+		else
+			SendMessage(0x0432, 0, TOOLINFO, tipHwnd) ;TTM_ADDTOOLW
+	} else
+	{
+		;文本为空且已注册则删除提示
+		if isRegister
+			SendMessage(0x0433, 0, TOOLINFO, tipHwnd) ;TTM_DELTOOLW
+	}
+	Return tipHwnd
+}
+;主动启用或停用工具提示(默认启用)
+GuiSetTipEnabled(GuiObj, isEnable)
+{
+	if !(GuiObj is Gui)
+		return
+	if !GuiObj.HasProp("gmxrTipHwnd")
+		return
+	tipHwnd := GuiObj.gmxrTipHwnd
+	if !tipHwnd
+		return
+	if isEnable
+		SendMessage 0x401, True, 0, tipHwnd ;TTM_ACTIVATE 启用
+	else
+		SendMessage 0x401, False, 0, tipHwnd ;停用
+}
+;设置工具提示的延迟时间
+GuiSetTipDelayTime(GuiObj, Automatic?, Initial?, AutoPop?, Reshow?)
+{
+	if !(GuiObj is Gui)
+		return
+	if !GuiObj.HasProp("gmxrTipHwnd")
+		return
+	tipHwnd := GuiObj.gmxrTipHwnd
+	if !tipHwnd
+		return
+	;自动档，依据初始显示延迟时间，自动弹出和重新显示延迟时间分别为其10倍、1/5
+	if IsSet(Automatic)
+	{
+		if !IsInteger(Automatic) or (Automatic < 0)
+			Automatic := -1 ;默认值
+		else if Automatic > 3200
+			Automatic := 3200
+		SendMessage 0x403, 0, Automatic, tipHwnd ;TTM_SETDELAYTIME TTDT_AUTOMATIC		
+		return
+	}
+	;设置初始显示延迟时间
+	if IsSet(Initial)
+	{
+		if !IsInteger(Initial) or (Initial < 0)
+			Initial := -1 ;默认值为500毫秒
+		else if Initial > 32000
+			Initial := 32000
+		SendMessage 0x403, 3, Initial, tipHwnd ;TTM_SETDELAYTIME TTDT_INITIAL
+	}
+	;设置自动弹出延迟时间
+	if IsSet(AutoPop)
+	{
+		if !IsInteger(AutoPop) or (AutoPop < 0)
+			AutoPop := -1 ;默认值为5000毫秒
+		else if AutoPop > 32000
+			AutoPop := 32000 ;允许的最大值为32000毫秒
+		SendMessage 0x403, 2, AutoPop, tipHwnd ;TTM_SETDELAYTIME TTDT_AUTOPOP
+	}
+	;设置从一个控件移动到另一个控件，重新显示延迟时间
+	if IsSet(Reshow)
+	{
+		if !IsInteger(Reshow) or (Reshow < 0)
+			Reshow := -1 ;默认值为100毫秒
+		else if Reshow > 32000
+			Reshow := 32000
+		SendMessage 0x403, 1, Reshow, tipHwnd ;TTM_SETDELAYTIME TTDT_RESHOW
+	}
+}
 ;判定是否为内置的游戏配置项
 isDefaultGame(game)
 {
