@@ -168,8 +168,8 @@ addMyGuiControlTip()
 	ControlAddTip(sendMethodCtrl, "不同游戏适用的发送方式不一样`n可选择不同方式进行调试")
 	ControlAddTip(pressTimeCtrl, "设置工具模拟按键操作的延时：`n不同游戏适用的延时不一样`n可设置适当延时进行调试`n延时设置范围：" minRandomTime "~" maxRandomTime)
 	ControlAddTip(delayTimeCtrl, "设置工具模拟窗口操作的延时：`n不同游戏适用的延时不一样`n可设置适当延时进行调试`n延时设置范围：" minRandomTime "~" maxRandomTime)
-	ControlAddTip(isMoveEditCtrl, "如果勾选后再启动：`n游戏内可调整输入框位置及宽高`n并保存到下次显示")
-	ControlAddTip(startCtrl, "确保游戏为“无边框”或“窗口化”模式`n(暂不兼容游戏全屏模式)`n启动之后才可正常使用")
+	ControlAddTip(isMoveEditCtrl, "勾选后支持调整输入框位置及宽高`n并保存到下次显示")
+	ControlAddTip(startCtrl, "确保游戏为“无边框”或“窗口化”模式`n启动之后才可正常使用")
 	ControlAddTip(inputKeyCtrl, "配置开始输入的按键：`n需与游戏内的按键配置一致`n才可同步打开游戏内聊天框")
 	ControlAddTip(isEnterKeyCtrl, "勾选后即配置：`n“开始输入”按键为“Enter”键")
 	ControlAddTip(manualSendCtrl, "手动输入文字并发送到：`n对应窗口内的“输入光标处”`n适用一些非聊天场景")
@@ -498,6 +498,29 @@ isMoveEdit_Click(GuiCtrlObj, Info)
 	if ctrlValue = -1
 		return
 	global isMoveEdit := ctrlValue
+	if !chatGui
+		return
+	if ctrlValue
+	{
+		chatGui.Opt("+Caption +Resize")
+	}else
+	{
+		chatGui.Opt("-Caption -Resize")
+	}
+	if chatGui.gmxrVisible
+	{
+		chatGui.Show("AutoSize")
+	} else
+	{
+		chatGui.Show("Hide AutoSize")
+	}
+	;允许调整窗口大小后，必须在输入框显示后，再次设置窗口最小及最大尺寸，才会及时生效
+	if ctrlValue
+	{
+		chatGuiMinH := getEditAutoHeight(chatMinFontSize)
+		chatGuiMaxH := getEditAutoHeight(chatMaxFontSize)
+		chatGui.Opt("+MinSize60x" chatGuiMinH " +MaxSize" A_ScreenWidth "x" chatGuiMaxH)
+	}
 }
 ;“手动发送”点击事件
 manualSend_Click(GuiCtrlObj, Info)
@@ -609,9 +632,6 @@ startTool()
 	addGameCtrl.Enabled := false
 	deleteGameCtrl.Enabled := false
 	inputKeyCtrl.Enabled := false
-	sendMethodCtrl.Enabled := false
-	delayTimeCtrl.Enabled := false
-	pressTimeCtrl.Enabled := false
 	isMoveEditCtrl.Enabled := false
 	isEnterKeyCtrl.Enabled := false
 	startCtrl.btnStatus := true
@@ -623,6 +643,7 @@ startTool()
 		startCtrl.Text := "停止"
 		startCtrl.Opt("+BackgroundRed")
 		startCtrl.Enabled := true
+		isMoveEditCtrl.Enabled := true
 		setMyGuiFocus(true)
 	}
 }
@@ -631,6 +652,7 @@ stopTool()
 {
 	;临时禁用启动按钮
 	startCtrl.Enabled := false
+	isMoveEditCtrl.Enabled := false
 	startCtrl.btnStatus := false
 	changeChatGui(-1)
 	;延时更新按钮状态
@@ -645,9 +667,6 @@ stopTool()
 			inputKeyCtrl.Enabled := false
 		else
 			inputKeyCtrl.Enabled := true
-		sendMethodCtrl.Enabled := true
-		delayTimeCtrl.Enabled := true
-		pressTimeCtrl.Enabled := true
 		isMoveEditCtrl.Enabled := true
 		isEnterKeyCtrl.Enabled := true
 		startCtrl.Text := "启动"
