@@ -1,6 +1,6 @@
 ﻿#Requires AutoHotkey v2.0
 ;版本号
-toolVersion := "v2.4.1"
+toolVersion := "v2.4.3"
 ;设置速度最快的WinTitle匹配模式
 SetTitleMatchMode 3
 SetTitleMatchMode "Fast"
@@ -1644,6 +1644,10 @@ https://github.com/GameXueRen/GRW-CNChat
 添加界面提示，内置“无人深空”游戏支持。
 正式版v2.4.1（2024/04/13）：
 修复已知BUG。
+正式版v2.4.3（2024/05/25）：
+优化发送非中文字符的速度。
+优化输入框显示与消失的响应性。
+启动时支持实时调整参数及输入框。
 )", "关于"
 }
 ;使用说明
