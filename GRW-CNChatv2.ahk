@@ -13,6 +13,7 @@ selectGameName := "选择游戏"
 gameExeName := "运行程序"
 inputKeyName := "开始输入"
 sendMethodName := "发送文本方式"
+isFixCNErrName := "修复中文乱码"
 minDelayName := "最小操作延时"
 maxDelayName := "最大操作延时"
 minPressName := "最小键击延时"
@@ -105,7 +106,7 @@ creatMyGuiControl()
 	global delayTimeCtrl := myGui.AddButton("yp wp hp x+" myGuiMarginX)
 	;启动、输入框调整模式、关于、说明
 	aboutCtrlH := 46	;关于按钮高度
-	aboutCtrlW := 24	;关于按钮宽度
+	aboutCtrlW := 26	;关于按钮宽度
 	inputKeyBoxH := myGuiH - selectGameBoxH - sendMethodBoxH - myGuiMarginY * 4
 	inputKeyBoxW := myGuiW - sendMethodCtrlW - myGuiMarginX * 4
 	startBoxW := sendMethodCtrlW+myGuiMarginX
@@ -124,10 +125,11 @@ creatMyGuiControl()
 	inputKeyCtrlH := 20		;开始输入控件高度
 	leftKeyNameW := 60		;左侧按键配置名宽度
 	keyNameW := (inputKeyBoxW - myGuiMarginX * 3) - leftKeyNameW
-	keyNameH := (inputKeyBoxH - ddlCtrlMarginTop - inputKeyCtrlH - textCtrlMarginY * 4) / 3.0
+	keyNameH := (inputKeyBoxH - ddlCtrlMarginTop - inputKeyCtrlH*2 - textCtrlMarginY * 5) / 3.0
 	myGui.AddGroupBox("Section ys xs+" myGuiMarginY * 2 + sendMethodCtrlW " w" inputKeyBoxW " h" inputKeyBoxH, inputKeyName)
 	global inputKeyCtrl := myGui.AddHotkey("Limit254 xp+" myGuiMarginX " yp+" ddlCtrlMarginTop " w" inputKeyCtrlW " h" inputKeyCtrlH)
 	global isEnterKeyCtrl := myGui.AddCheckbox("Checked0 x+" myGuiMarginX " yp w" inputKeyBoxW-myGuiMarginX*3-inputKeyCtrlW " h" inputKeyCtrlH, enterKeyName)
+	global isFixCNErrCtrl := myGui.AddCheckbox("Checked0 xs+" myGuiMarginX " y+" textCtrlMarginY " w" inputKeyBoxW-myGuiMarginX*2 " h" inputKeyCtrlH, "修复中文???乱码")
 	myGui.AddText("+0x200 xs+" myGuiMarginX " y+" textCtrlMarginY " w" leftKeyNameW " h" keyNameH, "发送文本：")
 	myGui.AddText("+0x200 x+" myGuiMarginX " yp w" keyNameW " hp", enterKeyName)
 	myGui.AddText("+0x200 xs+" myGuiMarginX " y+" textCtrlMarginY " w" leftKeyNameW " hp", "取消输入：")
@@ -147,6 +149,7 @@ addMyGuiControlEvent()
 	manualSendCtrl.OnEvent("Click", manualSend_Click)
 	inputKeyCtrl.OnEvent("Change", inputKey_Change)
 	isEnterKeyCtrl.OnEvent("Click", isEnterKey_Click)
+	isFixCNErrCtrl.OnEvent("Click", isFixCNErr_Click)
 	sendMethodCtrl.OnEvent("Change", sendMethod_Change)
 	delayTimeCtrl.OnEvent("Click", delayTime_Click)
 	pressTimeCtrl.OnEvent("Click", pressTime_Click)
@@ -174,31 +177,38 @@ addMyGuiControlTip()
 	ControlAddTip(isEnterKeyCtrl, "勾选后即配置：`n“开始输入”按键为“Enter”键")
 	ControlAddTip(manualSendCtrl, "手动输入文字并发送到：`n对应窗口内的“输入光标处”`n适用一些非聊天场景")
 	ControlAddTip(toolLinkCtrl, "https://github.com/GameXueRen/GRW-CNChat")
+	ControlAddTip(isFixCNErrCtrl, "勾选后即尝试修复发送中文时`n显示为 ??? 类似乱码的问题")
 	GuiSetTipDelayTime(myGui, 1000)
 }
-;写入配置文件
-writeCfg(Value, Filename, Section, Key)
+;读取配置文件
+readCfg(Section?, Key?, Default := "")
 {
-	if FileExist(Filename)
+	return IniRead(profilesName, Section ?? unset, Key ?? unset, Default)
+}
+;写入配置文件
+writeCfg(Value, Section, Key)
+{
+	if FileExist(profilesName)
 	{
-		IniWrite(Value, Filename, Section, Key)
+		IniWrite(Value, profilesName, Section, Key)
 	}else
 	{
 		;配置文件不存在时，创建默认配置文件、保存当前所有参数
 		defaultGameCfg()
-		IniWrite(selectGame, Filename, mainConfigName, selectGameName)
-		IniWrite(processName, Filename, selectGame, gameExeName)
-		IniWrite(inputKey, Filename, selectGame, inputKeyName)
-		IniWrite(sendMethod, Filename, selectGame, sendMethodName)
-		IniWrite(minDelayTime, Filename, selectGame, minDelayName)
-		IniWrite(maxDelayTime, Filename, selectGame, maxDelayName)
-		IniWrite(minPressTime, Filename, selectGame, minPressName)
-		IniWrite(maxPressTime, Filename, selectGame, maxPressName)
-		IniWrite(chatPosX, Filename, selectGame, chatPosXName)
-		IniWrite(chatPosY, Filename, selectGame, chatPosYName)
-		IniWrite(chatPosW, Filename, selectGame, chatPosWName)
-		IniWrite(chatFontSize, Filename, selectGame, chatFontSizeName)
-		IniWrite(Value, Filename, Section, Key)
+		IniWrite(selectGame, profilesName, mainConfigName, selectGameName)
+		IniWrite(processName, profilesName, selectGame, gameExeName)
+		IniWrite(inputKey, profilesName, selectGame, inputKeyName)
+		IniWrite(sendMethod, profilesName, selectGame, sendMethodName)
+		IniWrite(minDelayTime, profilesName, selectGame, minDelayName)
+		IniWrite(maxDelayTime, profilesName, selectGame, maxDelayName)
+		IniWrite(minPressTime, profilesName, selectGame, minPressName)
+		IniWrite(maxPressTime, profilesName, selectGame, maxPressName)
+		IniWrite(chatPosX, profilesName, selectGame, chatPosXName)
+		IniWrite(chatPosY, profilesName, selectGame, chatPosYName)
+		IniWrite(chatPosW, profilesName, selectGame, chatPosWName)
+		IniWrite(chatFontSize, profilesName, selectGame, chatFontSizeName)
+		IniWrite(isFixCNErr, profilesName, selectGame, isFixCNErrName)
+		IniWrite(Value, profilesName, Section, Key)
 		readCheckMainCfgData()
 		refreshSelectGameCtrl()
 	}
@@ -221,7 +231,7 @@ selectGame_Change(GuiCtrlObj, Info)
 	if game != selectGame
 	{
 		global selectGame := game
-		writeCfg(game, profilesName, mainConfigName, selectGameName)
+		writeCfg(game, mainConfigName, selectGameName)
 	}
 	readCheckGameCfgData(game)
 	refreshOtherCtrl()
@@ -278,7 +288,7 @@ addGame_Click(GuiCtrlObj, Info)
 		warningMsgBox("完整程序名必须包含 .exe 后缀`n" addExe " 不符合", "输入值错误！")
 		return
 	}
-	writeCfg(addExe, profilesName, addName, gameExeName)
+	writeCfg(addExe, addName, gameExeName)
 	gameNameArr.Push(addName)
 	selectGameCtrl.Add([addName])
 	ControlChooseIndex(gameNameArr.Length, selectGameCtrl, myGui)
@@ -299,7 +309,7 @@ deleteGame_Click(GuiCtrlObj, Info)
 		return
 	}
 	;删除对应的游戏配置文件
-	deleteGameCfg := IniRead(profilesName, deleteGame, , "")
+	deleteGameCfg := readCfg(deleteGame)
 	if deleteGameCfg
 		IniDelete(profilesName, deleteGame)
 	else
@@ -336,7 +346,7 @@ sendMethod_Change(GuiCtrlObj, Info)
 	if (methodValue != sendMethod) && methodName
 	{
 		global sendMethod := Integer(methodValue)
-		writeCfg(sendMethod, profilesName, selectGame, sendMethodName)
+		writeCfg(sendMethod, selectGame, sendMethodName)
 	}
 }
 ;键击随机延时改变
@@ -465,12 +475,12 @@ delayTime_Change(minTime, maxTime)
 	if minTime != minDelayTime
 	{
 		global minDelayTime := minTime
-		writeCfg(minDelayTime, profilesName, selectGame, minDelayName)
+		writeCfg(minDelayTime, selectGame, minDelayName)
 	}
 	if maxTime != maxDelayTime
 	{
 		global maxDelayTime := maxTime
-		writeCfg(maxDelayTime, profilesName, selectGame, maxDelayName)
+		writeCfg(maxDelayTime, selectGame, maxDelayName)
 	}
 	delayTimeCtrl.Text := "操作延时`n" minTime "-" maxTime
 }
@@ -482,12 +492,12 @@ pressTime_Change(minTime, maxTime)
 	if minTime != minPressTime
 	{
 		global minPressTime := minTime
-		writeCfg(minPressTime, profilesName, selectGame, minPressName)
+		writeCfg(minPressTime, selectGame, minPressName)
 	}
 	if maxTime != maxPressTime
 	{
 		global maxPressTime := maxTime
-		writeCfg(maxPressTime, profilesName, selectGame, maxPressName)
+		writeCfg(maxPressTime, selectGame, maxPressName)
 	}
 	pressTimeCtrl.Text := "键击延时`n" minTime "-" maxTime
 }
@@ -495,8 +505,6 @@ pressTime_Change(minTime, maxTime)
 isMoveEdit_Click(GuiCtrlObj, Info)
 {
 	ctrlValue := GuiCtrlObj.Value
-	if ctrlValue = -1
-		return
 	global isMoveEdit := ctrlValue
 	if !chatGui
 		return
@@ -545,37 +553,38 @@ manualSend_Click(GuiCtrlObj, Info)
 		}
 		setRandomKeyDelay()
 		WinActivate()
-		if WinWaitActive(, , maxwaitTime)
+		if !WinWaitActive(, , maxwaitTime)
+			return
+		switchCNIME(true)
+		switch sendMethod
 		{
-			switch sendMethod
-			{
-				case 2:
-					loop Parse chatText
-					{
-						ascCode := getGBKCode(A_LoopField)
-						keyName := "{ASC " ascCode "}"
-						SendEvent keyName
-					}
-				case 3:
-					SendText chatText
-				case 4:
-					waitTime := getRandomPressTime()
-					loop Parse chatText
-					{
-						PostMessage(WM_CHAR := 0x102, ord(A_LoopField))
-						Sleep waitTime
-					}
-				case 5:
-					clipSaved := ClipboardAll()
-					A_Clipboard := chatText
-					ClipWait(maxwaitTime)
-					SendEvent "^v"
-					A_Clipboard := clipSaved
-					clipSaved := ""
-				default:
-					ControlSendText chatText
-			}
+			case 2:
+				loop Parse chatText
+				{
+					ascCode := getGBKCode(A_LoopField)
+					keyName := "{ASC " ascCode "}"
+					SendEvent keyName
+				}
+			case 3:
+				SendText chatText
+			case 4:
+				waitTime := getRandomPressTime()
+				loop Parse chatText
+				{
+					PostMessage(WM_CHAR := 0x102, ord(A_LoopField))
+					Sleep waitTime
+				}
+			case 5:
+				clipSaved := ClipboardAll()
+				A_Clipboard := chatText
+				ClipWait(maxwaitTime)
+				SendEvent "^v"
+				A_Clipboard := clipSaved
+				clipSaved := ""
+			default:
+				ControlSendText chatText
 		}
+		switchCNIME(false)
 	}
 }
 ;开始输入按键改变
@@ -591,15 +600,14 @@ inputKey_Change(GuiCtrlObj, Info)
 	if inputKeyValue != inputKey
 	{
 		global inputKey := inputKeyValue
-		writeCfg(inputKeyValue, profilesName, selectGame, inputKeyName)
+		writeCfg(inputKeyValue, selectGame, inputKeyName)
 	}
 }
 ;“Enter”控件勾选与取消处理
 isEnterKey_Click(GuiCtrlObj, Info)
 {
+	setMyGuiFocus()
 	ctrlValue := GuiCtrlObj.Value
-	if ctrlValue = -1
-		return
 	if ctrlValue
 	{
 		inputKeyCtrl.Enabled := false
@@ -607,10 +615,21 @@ isEnterKey_Click(GuiCtrlObj, Info)
 		if inputKey != enterKeyName
 		{
 			global inputKey := enterKeyName
-			writeCfg(enterKeyName, profilesName, selectGame, inputKeyName)
+			writeCfg(enterKeyName, selectGame, inputKeyName)
 		}
 	}else
 		inputKeyCtrl.Enabled := true
+}
+;修复中文???乱码控件事件
+isFixCNErr_Click(GuiCtrlObj, Info)
+{
+	setMyGuiFocus()
+	ctrlValue := GuiCtrlObj.Value
+	if isFixCNErr != ctrlValue
+	{
+		global isFixCNErr := ctrlValue
+		writeCfg(ctrlValue, selectGame, isFixCNErrName)
+	}
 }
 ;启动按钮点击事件处理
 start_Click(GuiCtrlObj, Info)
@@ -689,22 +708,22 @@ changeChatGui(state := -1)
 			if chatPosX != chatX
 			{
 				global chatPosX := chatX
-				writeCfg(chatX, profilesName, selectGame, chatPosXName)
+				writeCfg(chatX, selectGame, chatPosXName)
 			}
 			if chatPosY != chatY
 			{
 				global chatPosY := chatY
-				writeCfg(chatY, profilesName, selectGame, chatPosYName)
+				writeCfg(chatY, selectGame, chatPosYName)
 			}
 			if chatPosW != clientW
 			{
 				global chatPosW := clientW
-				writeCfg(clientW, profilesName, selectGame, chatPosWName)
+				writeCfg(clientW, selectGame, chatPosWName)
 			}
 			if chatFontSize != fontSize
 			{
 				global chatFontSize := fontSize
-				writeCfg(fontSize, profilesName, selectGame, chatFontSizeName)
+				writeCfg(fontSize, selectGame, chatFontSizeName)
 			}
 			chatGui.Destroy()
 			global chatGui := 0
@@ -908,6 +927,7 @@ sendKeyCallback(hotkeyName)
 			;Alt+nnnnn小键盘方法
 			if WinWaitActive(, , maxwaitTime)
 			{
+				switchCNIME(true)
 				loop Parse chatText
 				{
 					ascCode := getGBKCode(A_LoopField)
@@ -921,12 +941,14 @@ sendKeyCallback(hotkeyName)
 			;SendText 方法
 			if WinWaitActive(, , maxwaitTime)
 			{
+				switchCNIME(true)
 				SendText chatText
 				setRandomKeyDelay()
 				SendEvent "{Enter}"
 			}
 		case 4:
 			;PostMessage 方法
+			switchCNIME(true)
 			waitTime := getRandomPressTime()
 			loop Parse chatText
 			{
@@ -942,6 +964,7 @@ sendKeyCallback(hotkeyName)
 			;复制粘贴方法
 			if WinWaitActive(, , maxwaitTime)
 			{
+				switchCNIME(true)
 				;保存原有剪贴板内容，避免粘贴后无法恢复
 				clipSaved := ClipboardAll()
 				A_Clipboard := chatText
@@ -955,12 +978,48 @@ sendKeyCallback(hotkeyName)
 			}
 		default:
 			;ControlSendText 方法
-			ControlSendText chatText
+			switchCNIME(true)
+    		ControlSendText chatText
 			if WinWaitActive(, , maxwaitTime)
 			{
 				setRandomKeyDelay()
 				SendEvent "{Enter}"
 			}
+	}
+	switchCNIME(false)
+}
+;切换中文输入法或恢复原输入法
+;IME的ID:"zh",134481924 "jp",68224017 "en",67699721
+switchCNIME(isSwitchCN := false)
+{
+	if !isFixCNErr
+		return
+	static inputLocaleID := -1
+	if isSwitchCN
+	{
+		;切换为中文输入法 0x8040804=134481924
+		try
+		{
+			threadID := DllCall("GetWindowThreadProcessId", "UInt", WinExist("A"), "UInt", 0)
+			localeID := DllCall("GetKeyboardLayout", "UInt", threadID, "UInt")
+			if localeID != 134481924
+			{
+				PostMessage(0x50, 0, 134481924, , "A")
+				inputLocaleID := localeID
+				Sleep getRandomDelayTime()
+			}
+		}
+	} else
+	{
+		if inputLocaleID = -1
+			return
+		;切换为英文输入法  美式键盘0x40904090=67699721
+		;恢复原输入法
+		try
+		{
+			PostMessage(0x50, 0, inputLocaleID, , "A")
+		}
+		inputLocaleID := -1
 	}
 }
 ;获取单个字符的GBK编码
@@ -1042,10 +1101,10 @@ readCheckMainCfgData()
 {
 	if FileExist(profilesName)
 	{
-		gameArr := creatCfgGameArr(IniRead(profilesName))
+		gameArr := creatCfgGameArr(readCfg())
 		if gameArr.Length
 		{
-			readGame := IniRead(profilesName, mainConfigName, selectGameName, "")
+			readGame := readCfg(mainConfigName, selectGameName)
 			if !readGame
 			{
 				readGame := gameArr[1]
@@ -1068,10 +1127,10 @@ readCheckMainCfgData()
 	;隐性配置项
 	;读取并校验配置文件的“最大等待响应时间”配置项
 	maxWaitTimeName := "最大等待响应时间"
-	readMaxWaitTime := IniRead(profilesName, mainConfigName, maxWaitTimeName, "2.5")
+	readMaxWaitTime := readCfg(mainConfigName, maxWaitTimeName, "5")
 	if !IsNumber(readMaxWaitTime)
 		cfgErrMsgBox(profilesName "：`n[" mainConfigName "]`n" maxWaitTimeName "=" readMaxWaitTime "`n对应的值不是数字！")
-	readMaxWaitTime := Float(readMaxWaitTime)
+	readMaxWaitTime := Round(readMaxWaitTime, 1)
 	if readMaxWaitTime < 0.01
 		readMaxWaitTime := 0.01
 	else if readMaxWaitTime > 10
@@ -1079,7 +1138,7 @@ readCheckMainCfgData()
 	global maxwaitTime := readMaxWaitTime
 	;读取并校验配置文件的“输入框最大字符数”配置项
 	chatMaxLengthName := "输入框最大字符数"
-	readChatMaxLength := IniRead(profilesName, mainConfigName, chatMaxLengthName, "88")
+	readChatMaxLength := readCfg(mainConfigName, chatMaxLengthName, "88")
 	if !IsInteger(readChatMaxLength)
 		cfgErrMsgBox(profilesName "：`n[" mainConfigName "]`n" chatMaxLengthName "=" readChatMaxLength "`n对应的值不是整数！")
 	readChatMaxLength := Integer(readChatMaxLength)
@@ -1090,7 +1149,7 @@ readCheckMainCfgData()
 	global chatMaxLength := readChatMaxLength
 	;读取并校验配置文件的“延时最大值”配置项
 	maxRandomTimeName := "延时最大值"
-	readMaxRandomTime := IniRead(profilesName, mainConfigName, maxRandomTimeName, "1000")
+	readMaxRandomTime := readCfg(mainConfigName, maxRandomTimeName, "1000")
 	if !IsInteger(readMaxRandomTime)
 		cfgErrMsgBox(profilesName "：`n[" mainConfigName "]`n" maxRandomTimeName "=" readMaxRandomTime "`n对应的值不是整数!")
 	readMaxRandomTime := Integer(readMaxRandomTime)
@@ -1101,7 +1160,7 @@ readCheckMainCfgData()
 ;读取并校验游戏配置项数据
 readCheckGameCfgData(readGame)
 {
-	gameExe := IniRead(profilesName, readGame, gameExeName, "")
+	gameExe := readCfg(readGame, gameExeName)
 	if !gameExe
 	{
 		gameSectionData := IniRead(profilesName, readGame, , "")
@@ -1112,13 +1171,13 @@ readCheckGameCfgData(readGame)
 	}
 	global processName := gameExe
 	;读取并校验当前选择游戏的“开始输入”配置项
-	readKey := IniRead(profilesName, readGame, inputKeyName, "t")
+	readKey := readCfg(readGame, inputKeyName, "t")
 	gameKey := GetKeyName(readKey)
 	if (!gameKey) or (gameKey = "CapsLock")
 		cfgErrMsgBox(profilesName "：`n[" readGame "]`n" inputKeyName "=" readKey "`n对应的按键配置不支持！")
 	global inputKey := gameKey
 	;读取并校验当前选择游戏的“发送文本方式”配置项
-	readMethod := IniRead(profilesName, readGame, sendMethodName, "1")
+	readMethod := readCfg(readGame, sendMethodName, "1")
 	if !IsInteger(readMethod)
 		cfgErrMsgBox(profilesName "：`n[" readGame "]`n" sendMethodName "=" readMethod "`n对应的值必须是 (1~5) 的整数！")
 	readMethod := Integer(readMethod)
@@ -1126,7 +1185,7 @@ readCheckGameCfgData(readGame)
 		readMethod := 1
 	global sendMethod := readMethod
 	;读取并校验当前选择游戏的“最小、最大操作延时”配置项
-	readMinDelay := IniRead(profilesName, readGame, minDelayName, "100")
+	readMinDelay := readCfg(readGame, minDelayName, "100")
 	if !IsInteger(readMinDelay)
 		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" minDelayName "=" readMinDelay "`n对应的值必须是10的倍数的整数！")
 	readMinDelay := Integer(readMinDelay)
@@ -1135,7 +1194,7 @@ readCheckGameCfgData(readGame)
 	else if readMinDelay > maxRandomTime
 		readMinDelay := maxRandomTime
 	global minDelayTime := readMinDelay
-	readMaxDelay := IniRead(profilesName, readGame, maxDelayName, "200")
+	readMaxDelay := readCfg(readGame, maxDelayName, "120")
 	if !IsInteger(readMaxDelay)
 		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" maxDelayName "=" readMaxDelay "`n对应的值必须是10的倍数的整数！")
 	readMaxDelay := Integer(readMaxDelay)
@@ -1145,7 +1204,7 @@ readCheckGameCfgData(readGame)
 		readMaxDelay := maxRandomTime
 	global maxDelayTime := readMaxDelay
 	;读取并校验当前选择游戏的“最小、最大键击延时”配置项
-	readMinPress := IniRead(profilesName, readGame, minPressName, "20")
+	readMinPress := readCfg(readGame, minPressName, "10")
 	if !IsInteger(readMinPress)
 		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" minPressName "=" readMinPress "`n对应的值必须是10的倍数的整数！")
 	readMinPress := Integer(readMinPress)
@@ -1154,7 +1213,7 @@ readCheckGameCfgData(readGame)
 	else if readMinPress > maxRandomTime
 		readMinPress := maxRandomTime
 	global minPressTime := readMinPress
-	readMaxPress := IniRead(profilesName, readGame, maxPressName, "100")
+	readMaxPress := readCfg(readGame, maxPressName, "20")
 	if !IsInteger(readMaxPress)
 		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" maxPressName "=" readMaxPress "`n对应的值必须是10的倍数的整数！")
 	readMaxPress := Integer(readMaxPress)
@@ -1164,22 +1223,22 @@ readCheckGameCfgData(readGame)
 		readMaxPress := maxRandomTime
 	global maxPressTime := readMaxPress
 	;读取并校验当前选择游戏的“输入框X、Y、W、字体尺寸”配置项
-	readPosX := IniRead(profilesName, readGame, chatPosXName, String(A_ScreenWidth*0.8))
+	readPosX := readCfg(readGame, chatPosXName, String(A_ScreenWidth*0.8))
 	if !IsNumber(readPosX)
 		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" chatPosXName "=" readPosX "`n对应的值不是数字！")
 	readPosX := Integer(readPosX)
 	global chatPosX := readPosX
-	readPosY := IniRead(profilesName, readGame, chatPosYName, String(A_ScreenHeight*0.6))
+	readPosY := readCfg(readGame, chatPosYName, String(A_ScreenHeight*0.6))
 	if !IsNumber(readPosY)
 		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" chatPosYName "=" readPosY "`n对应的值不是数字！")
 	readPosY := Integer(readPosY)
 	global chatPosY := readPosY
-	readPosW := IniRead(profilesName, readGame, chatPosWName, String(A_ScreenWidth*0.18))
+	readPosW := readCfg(readGame, chatPosWName, String(A_ScreenWidth*0.18))
 	if !IsNumber(readPosW)
 		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" chatPosWName "=" readPosW "`n对应的值不是数字！")
 	readPosW := Integer(readPosW)
 	global chatPosW := readPosW
-	readFontSize := IniRead(profilesName, readGame, chatFontSizeName, "12")
+	readFontSize := readCfg(readGame, chatFontSizeName, "12")
 	if !IsInteger(readFontSize)
 		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" chatFontSizeName "=" readFontSize "`n对应的值不是整数！")
 	readFontSize := Integer(readFontSize)
@@ -1188,6 +1247,10 @@ readCheckGameCfgData(readGame)
 	else if readFontSize > chatMaxFontSize
 		readFontSize := chatMaxFontSize
 	global chatFontSize := readFontSize
+	readIsFixCNErr := readCfg(readGame, isFixCNErrName, "0")
+	if (readIsFixCNErr != "0") && (readIsFixCNErr != "1")
+		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" isFixCNErrName "=" readIsFixCNErr "`n对应的值必须是0或1！")
+	global isFixCNErr := Integer(readIsFixCNErr)
 }
 ;刷新选择游戏控件显示
 refreshSelectGameCtrl()
@@ -1220,6 +1283,7 @@ refreshOtherCtrl()
 		inputKeyCtrl.Value := inputKey
 		ControlSetChecked(false, isEnterKeyCtrl, myGui)
 	}
+	ControlSetChecked(isFixCNErr, isFixCNErrCtrl, myGui)
 }
 ;过滤生成游戏名字数组
 creatCfgGameArr(sectionStr)
@@ -1263,7 +1327,7 @@ cfgErrMsgBox(text?)
 declarationMsgBox()
 {
 	declarationName := "启动声明"
-	isShow := IniRead(profilesName, mainConfigName, declarationName, "")
+	isShow := readCfg(mainConfigName, declarationName)
 	if !isShow
 		return
 	text := "游戏无缝输入中文" toolVersion "
@@ -1536,6 +1600,7 @@ defaultGameCfg()
 运行程序=GRW.exe
 开始输入=t
 发送文本方式=1
+修复中文乱码=1
 最小操作延时=100
 最大操作延时=200
 最小键击延时=20
