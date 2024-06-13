@@ -22,6 +22,7 @@ chatPosXName := "输入框X"
 chatPosYName := "输入框Y"
 chatPosWName := "输入框W"
 chatFontSizeName := "输入框字体尺寸"
+isShowAdminRunName := "isShowAdminRun"
 ;聊天框
 chatGui := 0
 chatEditName := "gmxrEdit"
@@ -513,6 +514,7 @@ isMoveEdit_Click(GuiCtrlObj, Info)
 manualSend_Click(GuiCtrlObj, Info)
 {
 	setMyGuiFocus()
+	checkIsAdminRun()
 	myGui.Opt("+OwnDialogs")
 	myGui.GetPos(&myGuiX, &myGuiY)
 	inputBoxW := myGuiW-32
@@ -622,6 +624,7 @@ start_Click(GuiCtrlObj, Info)
 ;启动
 startTool()
 {
+	checkIsAdminRun()
 	setRandomKeyDelay()
 	;临时禁用启动按钮
 	startCtrl.Enabled := false
@@ -1149,6 +1152,11 @@ readCheckMainCfgData()
 	if readMaxRandomTime < minRandomTime
 		readMaxRandomTime := minRandomTime
 	global maxRandomTime := readMaxRandomTime
+	;是否显示以管理员身份运行建议
+	readShowAdminRun := readCfg(mainConfigName, isShowAdminRunName, "1")
+	if (readShowAdminRun != "0") && (readShowAdminRun != "1")
+		cfgErrMsgBox(profilesName "：`n[" mainConfigName "]`n" isShowAdminRunName "=" readShowAdminRun "`n对应的值必须是0或1！")
+	global isShowAdminRun := Integer(readShowAdminRun)
 }
 ;读取并校验游戏配置项数据
 readCheckGameCfgData(readGame)
@@ -1563,6 +1571,59 @@ GuiSetTipDelayTime(GuiObj, Automatic?, Initial?, AutoPop?, Reshow?)
 			Reshow := 32000
 		SendMessage 0x403, 1, Reshow, tipHwnd ;TTM_SETDELAYTIME TTDT_RESHOW
 	}
+}
+;检查是否为管理身份运行并提示
+checkIsAdminRun()
+{
+	if A_IsAdmin
+		return
+	if !isShowAdminRun
+		return
+	static adminRunWarning := false
+	if adminRunWarning
+		return
+	myGui.Opt("+OwnDialogs")
+	result := warningMsgBox("
+	(
+		建议“以管理员身份运行”此工具。
+		可确保无缝输入中文功能生效！
+
+		点击“确定”即以管理员身份重启。
+		点击“取消”则跳过提示继续运行。
+
+		如何设置始终“以管理员身份运行”?
+		选取工具运行文件->鼠标右键
+		->属性->兼容性
+		->勾选“以管理员身份运行此程序”
+		->应用。
+	)", "重要提示！", "OKCancel Icon! Default1")
+	if result = "OK"
+	{
+		try
+		{
+			if A_IsCompiled
+				Run '*RunAs "' A_ScriptFullPath '" /restart'
+			else
+				Run '*RunAs "' A_AhkPath '" /restart "' A_ScriptFullPath '"'
+		} catch Error as err
+		{
+			extraInfo := err.Extra
+			if (extraInfo != "操作已被用户取消。`r`n") && (extraInfo != "操作已被用户取消。")
+			{
+				warningMsgBox("无法以管理员身份运行！`n将尝试以普通用户身份运行。", "运行错误！", "OK Icon!")
+				if A_IsCompiled
+					Run '"' A_ScriptFullPath '" /restart'
+				else
+					Run '"' A_AhkPath '" /restart "' A_ScriptFullPath '"'
+				ExitApp
+			}
+		}else
+		{
+			ExitApp
+		}
+	}
+	;仅提示一次
+	adminRunWarning := true
 }
 ;重新加载
 clickReload(*)
