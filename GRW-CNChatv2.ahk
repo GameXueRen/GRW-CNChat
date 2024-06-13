@@ -9,6 +9,10 @@ profilesName := "游戏无缝输入中文v2配置.ini"
 ;配置文件[main]段各项名称
 mainConfigName := "main"
 selectGameName := "选择游戏"
+maxWaitTimeName := "maxWaitTime"
+chatMaxLengthName := "chatMaxLength"
+chatMaxFontSizeName := "chatMaxFontSize"
+isShowTipName := "isShowTip"
 ;配置文件游戏配置段各项名称
 gameExeName := "运行程序"
 inputKeyName := "开始输入"
@@ -115,8 +119,8 @@ creatMyGuiControl()
 	myGui.AddGroupBox("Section xs ys+" sendMethodBoxH + myGuiMarginY " w" startBoxW " h" inputKeyBoxH, "")
 	global startCtrl := myGui.AddButton("xp+" myGuiMarginX " yp+" ddlCtrlMarginTop " w" startBoxW - myGuiMarginX * 3 - aboutCtrlW " h" inputKeyBoxH - ddlCtrlMarginTop - myGuiMarginY, "启动")
 	startCtrl.SetFont("s24")
-	global aboutCtrl := myGui.AddButton("x+" myGuiMarginX " yp w" aboutCtrlW " h" aboutCtrlH, "关`n`n于")
-	global readmeCtrl := myGui.AddButton("xp ys+" inputKeyBoxH-myGuiMarginY-aboutCtrlH " w" aboutCtrlW " h" aboutCtrlH, "说`n`n明")
+	global settingsCtrl := myGui.AddButton("x+" myGuiMarginX " yp w" aboutCtrlW " h" aboutCtrlH, "设`n`n置")
+	global aboutCtrl := myGui.AddButton("xp ys+" inputKeyBoxH-myGuiMarginY-aboutCtrlH " w" aboutCtrlW " h" aboutCtrlH, "关`n`n于")
 	global manualSendCtrl := myGui.AddButton("x+-62 ys-8 w62 h22", "手动发送")
 	global isMoveEditCtrl := myGui.AddCheckbox("ys-6 w80 h20 Checked0 xs+" myGuiMarginX, "调整输入框")
 	;添加自定义属性，存储启动按钮的启停状态
@@ -157,17 +161,13 @@ addMyGuiControlEvent()
 	pressTimeCtrl.OnEvent("Click", pressTime_Click)
 	startCtrl.OnEvent("Click", start_Click)
 	aboutCtrl.OnEvent("Click", clickAbout)
-	readmeCtrl.OnEvent("Click", clickReadme)
+	settingsCtrl.OnEvent("Click", openSettingsGui)
 	;主界面关闭触发事件
 	myGui.OnEvent("Close", myGui_Close)
 }
 ;添加控件提示
 addMyGuiControlTip()
 {
-	;读取是否显示提示信息配置项
-	readShowTip := IniRead(profilesName, mainConfigName, "显示提示", "")
-	if !readShowTip
-		return
 	ControlAddTip(addGameCtrl, "添加新的游戏支持")
 	ControlAddTip(deleteGameCtrl, "删除当前游戏配置项")
 	ControlAddTip(sendMethodCtrl, "不同游戏适用的发送方式不一样`n可选择不同方式进行调试")
@@ -180,7 +180,105 @@ addMyGuiControlTip()
 	ControlAddTip(manualSendCtrl, "手动输入文字并发送到：`n对应窗口内的“输入光标处”`n适用一些非聊天场景")
 	ControlAddTip(toolLinkCtrl, "https://github.com/GameXueRen/GRW-CNChat")
 	ControlAddTip(isFixCNErrCtrl, "勾选后即尝试修复发送中文时`n显示为 ??? 类似乱码的问题")
-	GuiSetTipDelayTime(myGui, 1000)
+	ControlAddTip(settingsCtrl, "打开更多设置")
+	ControlAddTip(aboutCtrl, "常见问题`n更新记录")
+	GuiSetTipDelayTime(myGui, 800)
+	GuiSetTipEnabled(myGui, isShowTip)
+}
+;设置GUI
+openSettingsGui(*)
+{
+	setMyGuiFocus()
+	myGui.GetPos(&myGuiX, &myGuiY)
+	settingsGuiW := 166
+	settingsGuiH := 214
+	settingsGuiX := Integer(myGuiX + (myGuiW - settingsGuiW) / 2)
+	settingsGuiY := Integer(myGuiY + (myGuiH - settingsGuiH) / 2)
+	settingsGui := Gui("-Resize -MinimizeBox +Owner" myGui.Hwnd, "更多设置")
+	settingsGui.MarginX := 8
+	settingsGui.MarginY := 6
+	settingsGui.AddCheckbox("xm ym h20 Checked" isShowAdminRun " v" isShowAdminRunName, "显示以管理员运行建议")
+	settingsGui.AddCheckbox("xp hp Checked" isShowTip " v" isShowTipName, "显示帮助(鼠标悬停显示)")
+	editCtrlW := 50
+	settingsGui.AddText("+0x200 r1", "等待窗口响应最长时间：")
+	settingsGui.AddEdit("Section y+2 r1 +Limit4 w" editCtrlW " v" maxWaitTimeName, maxwaitTime)
+	settingsGui.AddText("+0x200 x+4 hp", "秒 (1 - 60)")
+	settingsGui.AddText("+0x200 xs r1", "输入框的最大字符数：")
+	settingsGui.AddEdit("Section y+2 r1 +Number +Limit3 w" editCtrlW " v" chatMaxLengthName, chatMaxLength)
+	settingsGui.AddText("+0x200 x+4 hp", "个 (88 - 880)")
+	settingsGui.AddText("+0x200 xs r1", "输入框的最大字体尺寸：")
+	settingsGui.AddEdit("Section y+2 r1 +Number +Limit2 w" editCtrlW " v" chatMaxFontSizeName, chatMaxFontSize)
+	settingsGui.AddText("+0x200 x+4 hp", "磅 (10 - 72)")
+	savesettingsW := 80
+	saveSettingsXS := Round((settingsGuiW-savesettingsW-settingsGui.MarginX*2)/2)
+	saveSettingsCtrl := settingsGui.AddButton("h30 Center xs+" saveSettingsXS " w" savesettingsW, "保存设置")
+
+	settingsGui.Show("x" settingsGuiX " y" settingsGuiY " w" settingsGuiW "h" settingsGuiH)
+	settingsGui.OnEvent("Close", (*) => myGui.Opt("-Disabled"))
+	saveSettingsCtrl.OnEvent("Click", saveSettings_Click)
+	myGui.Opt("+Disabled")
+}
+;保存设置
+saveSettings_Click(GuiCtrlObj, info)
+{
+	settingsData := GuiCtrlObj.Gui.Submit(false)
+	for ctrlName, ctrlValue in settingsData.OwnProps()
+	{
+		if (ctrlName = isShowTipName)
+		{
+			if (ctrlValue != isShowTip)
+			{
+				global isShowTip := ctrlValue
+				writeCfg(ctrlValue, mainConfigName, ctrlName)
+				GuiSetTipEnabled(myGui, isShowTip)
+			}
+		}else if (ctrlName = isShowAdminRunName)
+		{
+			if (ctrlValue != isShowAdminRun)
+			{
+				global isShowAdminRun := ctrlValue
+				writeCfg(ctrlValue, mainConfigName, ctrlName)
+			}
+		}else if (ctrlName = maxWaitTimeName)
+		{
+			if (ctrlValue != maxwaitTime) && IsNumber(ctrlValue)
+			{
+				ctrlValue := Round(Number(ctrlValue), 1)
+				if ctrlValue < 1
+					ctrlValue := 1
+				else if ctrlValue > 60
+					ctrlValue := 60
+				global maxwaitTime := ctrlValue
+				writeCfg(ctrlValue, mainConfigName, ctrlName)
+			}
+		} else if (ctrlName = chatMaxLengthName)
+		{
+			if (ctrlValue != chatMaxLength) && IsNumber(ctrlValue)
+			{
+				ctrlValue := Round(Number(ctrlValue), 0)
+				if ctrlValue < 88
+					ctrlValue := 88
+				else if ctrlValue > 880
+					ctrlValue := 880
+				global chatMaxLength := ctrlValue
+				writeCfg(ctrlValue, mainConfigName, ctrlName)
+			}
+		} else if (ctrlName = chatMaxFontSizeName)
+		{
+			if (ctrlValue != chatMaxFontSize) && IsNumber(ctrlValue)
+			{
+				ctrlValue := Round(Number(ctrlValue), 0)
+				if ctrlValue < chatMinFontSize
+					ctrlValue := chatMinFontSize
+				else if ctrlValue > 72
+					ctrlValue := 72
+				global chatMaxFontSize := ctrlValue
+				writeCfg(ctrlValue, mainConfigName, ctrlName)
+			}
+		}
+	}
+	myGui.Opt("-Disabled")
+	GuiCtrlObj.Gui.Destroy()
 }
 ;读取配置文件
 readCfg(Section?, Key?, Default := "")
@@ -760,7 +858,7 @@ changeChatGui(state := -1)
 		chatGui.BackColor := "Black"
 		chatGui.MarginX := 0
 		chatGui.MarginY := 0
-		chatGui.AddEdit("xm ym cWhite BackgroundBlack r1 Disabled1 w" chatW - 20 " h" chatH " Limit" chatMaxLength " v" chatEditName)
+		chatGui.AddEdit("x0 y0 cWhite BackgroundBlack r1 Disabled1 w" chatW - 20 " h" chatH " Limit" chatMaxLength " v" chatEditName)
 		chatClose := chatGui.AddText("yp +Center cWhite +BackgroundRed +0x200 vgmxrClose w20 h" chatH, "X")
 		chatClose.SetFont("s12")
 		chatGui.Show("Hide AutoSize x" chatX " y" chatY)
@@ -1127,10 +1225,10 @@ readCheckMainCfgData()
 	if !IsNumber(readMaxWaitTime)
 		cfgErrMsgBox(profilesName "：`n[" mainConfigName "]`n" maxWaitTimeName "=" readMaxWaitTime "`n对应的值不是数字！")
 	readMaxWaitTime := Round(readMaxWaitTime, 1)
-	if readMaxWaitTime < 0.01
-		readMaxWaitTime := 0.01
-	else if readMaxWaitTime > 10
-		readMaxWaitTime := 10
+	if readMaxWaitTime < 1
+		readMaxWaitTime := 1
+	else if readMaxWaitTime > 60
+		readMaxWaitTime := 60
 	global maxwaitTime := readMaxWaitTime
 	;读取并校验配置文件的“输入框最大字符数”配置项
 	chatMaxLengthName := "输入框最大字符数"
@@ -1138,10 +1236,10 @@ readCheckMainCfgData()
 	if !IsInteger(readChatMaxLength)
 		cfgErrMsgBox(profilesName "：`n[" mainConfigName "]`n" chatMaxLengthName "=" readChatMaxLength "`n对应的值不是整数！")
 	readChatMaxLength := Integer(readChatMaxLength)
-	if readChatMaxLength < 40
-		readChatMaxLength := 40
-	else if readChatMaxLength > 200
-		readChatMaxLength := 200
+	if readChatMaxLength < 88
+		readChatMaxLength := 88
+	else if readChatMaxLength > 880
+		readChatMaxLength := 880
 	global chatMaxLength := readChatMaxLength
 	;读取并校验配置文件的“延时最大值”配置项
 	maxRandomTimeName := "延时最大值"
@@ -1152,6 +1250,21 @@ readCheckMainCfgData()
 	if readMaxRandomTime < minRandomTime
 		readMaxRandomTime := minRandomTime
 	global maxRandomTime := readMaxRandomTime
+	;输入框的最大字体尺寸
+	readChatMaxFontSize := readCfg(mainConfigName, chatMaxFontSizeName, "60")
+	if !IsInteger(readChatMaxFontSize)
+		cfgErrMsgBox(profilesName "：`n[" mainConfigName "]`n" chatMaxFontSizeName "=" readChatMaxFontSize "`n对应的值不是整数!")
+	readChatMaxFontSize := Integer(readChatMaxFontSize)
+	if readChatMaxFontSize < chatMinFontSize
+		readChatMaxFontSize := chatMinFontSize
+	else if readChatMaxFontSize > 99
+		readChatMaxFontSize := 99
+	global chatMaxFontSize := readChatMaxFontSize
+	;是否显示帮助提示
+	readShowTip := readCfg(mainConfigName, isShowTipName, "1")
+	if (readShowTip != "0") && (readShowTip != "1")
+		cfgErrMsgBox(profilesName "：`n[" mainConfigName "]`n" isShowTipName "=" readShowTip "`n对应的值必须是0或1！")
+	global isShowTip := Integer(readShowTip)
 	;是否显示以管理员身份运行建议
 	readShowAdminRun := readCfg(mainConfigName, isShowAdminRunName, "1")
 	if (readShowAdminRun != "0") && (readShowAdminRun != "1")
@@ -1738,34 +1851,30 @@ GameXueRen 制作
 https://github.com/GameXueRen/GRW-CNChat
 游戏交流群：299177445 (游击战王牌大队)
 
+常见问题1：发送中文后，游戏内显示为 ??? 类似乱码。
+解决办法：勾选工具界面的“修复中文???乱码”选项解决。
+->或者在启动游戏前，先切换到中文输入法，再启动游戏。
+->或者进入win系统设置->时间和语言->语言->首选语言，
+在“中文(简体，中国)”或“英语(美国)”语言选项下删除“美式键盘”。
+->或者更换其他中文输入法尝试解决。
+
+常见问题2：启动后，游戏内无法正常调用输入框或发送中文。
+解决办法：选取工具运行文件->鼠标右键->属性->兼容性
+->勾选“以管理员身份运行此程序”->应用，接着重新运行工具尝试解决。
+
 更新记录：
-公测版v1（2024/03/05）：
-首次发布，支持荒野无缝中文输入。
-公测版v1.1（2024/03/07）：
-改进打开聊天时的响应方式，方便观看聊天记录。
-公测版v1.2.1（2024/03/10）：
-兼容中文输入状态下按下Enter键导入英文，而不是直接发送；
-兼容win自带的微软拼音输入法，解决导入中文乱码；
-改善模拟按键及导入文本方式，更可靠。
-公测版v1.2.3（2024/03/13）：
-解决游戏内输入框在某些情况下不同步打开的BUG。
-公测版v2.0（2024/03/19）：
-大改版，提供自定义按键、参数微调功能，及适配更多游戏。
-公测版v2.1（2024/03/21）：
-支持开始输入按键设置为Enter，新增2种发送方式，兼容更多游戏。
-公测版v2.2（2024/03/23）：
-修复已知BUG，重新设计界面布局。
-正式版v2.3（2024/03/25）：
-修复已知BUG，正式发布！
+公测版v1~v2.2（2024/03/05-2024/03/23）：
+初步支持《幽灵行动荒野》无缝中文输入，支持同步打开游戏内聊天框。
+兼容中文输入法下按Enter键导入英文，而不是直接发送。
+v2版提供自定义按键、参数微调功能，来适用更多游戏。
+支持“开始输入”按键设置为Enter。
+正式版v2.3（2024/03/25）：修复已知BUG，正式发布！
 正式版v2.4（2024/04/11）：
-优化热键逻辑，支持调整输入框高度。
-添加“手动发送”，来适用非聊天场景。
+优化热键逻辑，支持调整输入框高度。添加“手动发送”，来适用非聊天场景。
 添加界面提示，内置“无人深空”游戏支持。
-正式版v2.4.1（2024/04/13）：
-修复已知BUG。
+正式版v2.4.1（2024/04/13）：修复已知BUG。
 正式版v2.4.3（2024/05/25）：
-优化发送非中文字符的速度。
-优化输入框显示与消失的响应性。
+优化发送非中文字符的速度，优化输入框显示与消失的响应性。
 启动时支持实时调整参数及输入框。
 )", "关于"
 }
@@ -1789,8 +1898,8 @@ clickReadme(*)
 如果出现概率性无法联动打开游戏内输入框，或者发送漏字的情况，
 可适当调高此参数来调试。
 
-操作延时：此为工具模拟按键操作前的延时，默认为100~120毫秒之间随机。
-对于一些游戏，太低的操作延时将导致多个连续的模拟按键动作不生效。
+操作延时：此为工具模拟窗口操作的延时，默认为100~120毫秒之间随机。
+对于一些游戏，太低的操作延时将导致多个连续的模拟窗口动作不生效。
 教高的操作延时会让工具的开启输入、发送文本、取消输入动作较为迟滞。
 
 调整输入框：勾选后，在游戏内可随意拖动输入框位置及调整宽度，
