@@ -24,6 +24,7 @@ chatPosWName := "输入框W"
 chatFontSizeName := "输入框字体尺寸"
 ;聊天框
 chatGui := 0
+chatEditName := "gmxrEdit"
 ;是否开启“输入框调整模式”
 isMoveEdit := 0
 ;输入框字体最小和最大尺寸
@@ -359,7 +360,7 @@ pressTime_Click(GuiCtrlObj, Info)
 	inputBoxH := 90
 	inputBoxX := Integer(myGuiX + (myGuiW - inputBoxW) / 2)
 	inputBoxY := Integer(myGuiY + (myGuiH - inputBoxH) / 2)
-	minValueBox := InputBox("键击延时的最小值(毫秒)", "必须为10的倍数的整数", "x" inputBoxX " y" inputBoxY " w" inputBoxW " h" inputBoxH, minPressTime)
+	minValueBox := InputBox("键击延时的最小值(毫秒)", "必须为正整数", "x" inputBoxX " y" inputBoxY " w" inputBoxW " h" inputBoxH, minPressTime)
 	if minValueBox.Result = "OK"
 	{
 		minValue := minValueBox.Value
@@ -370,11 +371,6 @@ pressTime_Click(GuiCtrlObj, Info)
 			warningMsgBox("请输入整数数字", "输入值错误！")
 			return
 		}
-		if Mod(minValue, 10)
-		{
-			warningMsgBox("请输入10的倍数的整数数字！比如100,110,120", "输入值错误！")
-			return
-		}
 		minValue := Integer(minValue)
 		if minValue > maxRandomTime
 		{
@@ -382,7 +378,7 @@ pressTime_Click(GuiCtrlObj, Info)
 			return
 		}
 		myGui.Opt("+OwnDialogs")
-		maxValueBox := InputBox("键击延时的最大值(毫秒)", "必须为10的倍数的整数", "x" inputBoxX " y" inputBoxY " w" inputBoxW " h" inputBoxH, maxPressTime)
+		maxValueBox := InputBox("键击延时的最大值(毫秒)", "必须为正整数", "x" inputBoxX " y" inputBoxY " w" inputBoxW " h" inputBoxH, maxPressTime)
 		if maxValueBox.Result = "OK"
 		{
 			maxValue := maxValueBox.Value
@@ -391,11 +387,6 @@ pressTime_Click(GuiCtrlObj, Info)
 			if !IsInteger(maxValue)
 			{
 				warningMsgBox("请输入整数数字！", "输入值错误！")
-				return
-			}
-			if Mod(maxValue, 10)
-			{
-				warningMsgBox("请输入10的倍数的整数数字！比如200,210,220", "输入值错误！")
 				return
 			}
 			maxValue := Integer(maxValue)
@@ -418,7 +409,7 @@ delayTime_Click(GuiCtrlObj, Info)
 	inputBoxH := 90
 	inputBoxX := Integer(myGuiX + (myGuiW - inputBoxW) / 2)
 	inputBoxY := Integer(myGuiY + (myGuiH - inputBoxH) / 2)
-	minValueBox := InputBox("操作延时的最小值(毫秒)", "必须为10的倍数的整数", "x" inputBoxX " y" inputBoxY " w" inputBoxW " h" inputBoxH, minDelayTime)
+	minValueBox := InputBox("操作延时的最小值(毫秒)", "必须为正整数", "x" inputBoxX " y" inputBoxY " w" inputBoxW " h" inputBoxH, minDelayTime)
 	if minValueBox.Result = "OK"
 	{
 		minValue := minValueBox.Value
@@ -429,11 +420,6 @@ delayTime_Click(GuiCtrlObj, Info)
 			warningMsgBox("请输入整数数字！", "输入值错误！")
 			return
 		}
-		if Mod(minValue, 10)
-		{
-			warningMsgBox("请输入10的倍数的整数数字！比如100,110,120", "输入值错误！")
-			return
-		}
 		minValue := Integer(minValue)
 		if minValue > maxRandomTime
 		{
@@ -441,7 +427,7 @@ delayTime_Click(GuiCtrlObj, Info)
 			return
 		}
 		myGui.Opt("+OwnDialogs")
-		maxValueBox := InputBox("操作延时的最大值(毫秒)", "必须为10的倍数的整数", "x" inputBoxX " y" inputBoxY " w" inputBoxW " h" inputBoxH, maxDelayTime)
+		maxValueBox := InputBox("操作延时的最大值(毫秒)", "必须为正整数", "x" inputBoxX " y" inputBoxY " w" inputBoxW " h" inputBoxH, maxDelayTime)
 		if maxValueBox.Result = "OK"
 		{
 			maxValue := maxValueBox.Value
@@ -450,11 +436,6 @@ delayTime_Click(GuiCtrlObj, Info)
 			if !IsInteger(maxValue)
 			{
 				warningMsgBox("请输入整数数字！", "输入值错误！")
-				return
-			}
-			if Mod(maxValue, 10)
-			{
-				warningMsgBox("请输入10的倍数的整数数字！比如100,110,120", "输入值错误！")
 				return
 			}
 			maxValue := Integer(maxValue)
@@ -508,27 +489,25 @@ isMoveEdit_Click(GuiCtrlObj, Info)
 	global isMoveEdit := ctrlValue
 	if !chatGui
 		return
+	GuiCtrlObj.Enabled := false
 	if ctrlValue
 	{
 		chatGui.Opt("+Caption +Resize")
 	}else
 	{
+		saveChatGuiPos()
 		chatGui.Opt("-Caption -Resize")
 	}
-	if chatGui.gmxrVisible
+	if (WinGetMinMax(chatGui) != -1)
 	{
-		chatGui.Show("AutoSize")
-	} else
-	{
-		chatGui.Show("Hide AutoSize")
+		chatGui.Show("Restore AutoSize")
 	}
 	;允许调整窗口大小后，必须在输入框显示后，再次设置窗口最小及最大尺寸，才会及时生效
 	if ctrlValue
 	{
-		chatGuiMinH := getEditAutoHeight(chatMinFontSize)
-		chatGuiMaxH := getEditAutoHeight(chatMaxFontSize)
-		chatGui.Opt("+MinSize60x" chatGuiMinH " +MaxSize" A_ScreenWidth "x" chatGuiMaxH)
+		chatGui.Opt("+MinSize60x" getEditAutoHeight(chatMinFontSize) " +MaxSize" A_ScreenWidth "x" getEditAutoHeight(chatMaxFontSize))
 	}
+	SetTimer((*)=> GuiCtrlObj.Enabled := true, -1000)
 }
 ;“手动发送”点击事件
 manualSend_Click(GuiCtrlObj, Info)
@@ -694,6 +673,37 @@ stopTool()
 		setMyGuiFocus(false)
 	}
 }
+;保存输入框位置大小
+saveChatGuiPos()
+{
+	if !chatGui
+		return
+	if (WinGetMinMax(chatGui) = -1)
+		return
+	chatGui.GetPos(&chatX, &chatY)
+	chatGui.GetClientPos(, , &clientW, &clientH)
+	fontSize := getEditAutoFontSize(clientH)
+	if chatPosX != chatX
+	{
+		global chatPosX := chatX
+		writeCfg(chatX, selectGame, chatPosXName)
+	}
+	if chatPosY != chatY
+	{
+		global chatPosY := chatY
+		writeCfg(chatY, selectGame, chatPosYName)
+	}
+	if chatPosW != clientW
+	{
+		global chatPosW := clientW
+		writeCfg(clientW, selectGame, chatPosWName)
+	}
+	if chatFontSize != fontSize
+	{
+		global chatFontSize := fontSize
+		writeCfg(fontSize, selectGame, chatFontSizeName)
+	}
+}
 ;显示、隐藏或销毁输入框
 changeChatGui(state := -1)
 {
@@ -702,28 +712,9 @@ changeChatGui(state := -1)
 		changeHotkeys(state)
 		if chatGui
 		{
-			chatGui.GetPos(&chatX, &chatY)
-			chatGui.GetClientPos(, , &clientW, &clientH)
-			fontSize := getEditAutoFontSize(clientH)
-			if chatPosX != chatX
+			if isMoveEdit
 			{
-				global chatPosX := chatX
-				writeCfg(chatX, selectGame, chatPosXName)
-			}
-			if chatPosY != chatY
-			{
-				global chatPosY := chatY
-				writeCfg(chatY, selectGame, chatPosYName)
-			}
-			if chatPosW != clientW
-			{
-				global chatPosW := clientW
-				writeCfg(clientW, selectGame, chatPosWName)
-			}
-			if chatFontSize != fontSize
-			{
-				global chatFontSize := fontSize
-				writeCfg(fontSize, selectGame, chatFontSizeName)
+				saveChatGuiPos()
 			}
 			chatGui.Destroy()
 			global chatGui := 0
@@ -757,44 +748,45 @@ changeChatGui(state := -1)
 			;已开启输入框调整模式
 			chatGuiMinH := getEditAutoHeight(chatMinFontSize)
 			chatGuiMaxH := getEditAutoHeight(chatMaxFontSize)
-			global chatGui := Gui("+ToolWindow -SysMenu +Border +Caption +Resize +MinSize60x" chatGuiMinH " +MaxSize" A_ScreenWidth "x" chatGuiMaxH, chatGuiTitle)
+			global chatGui := Gui("+ToolWindow -SysMenu +Border +Caption +Resize +AlwaysOnTop +MinSize60x" chatGuiMinH " +MaxSize" A_ScreenWidth "x" chatGuiMaxH, chatGuiTitle)
 		} else
 		{
-			global chatGui := Gui("+ToolWindow -SysMenu +Border -Caption -Resize", chatGuiTitle)
+			global chatGui := Gui("+ToolWindow -SysMenu +Border -Caption -Resize +AlwaysOnTop", chatGuiTitle)
 		}
 		chatGui.SetFont("bold s" chatFontSize)
 		chatGui.BackColor := "Black"
 		chatGui.MarginX := 0
 		chatGui.MarginY := 0
-		chatEdit := chatGui.AddEdit("x0 y0 cWhite BackgroundBlack r1 Disabled1 w" chatW - 20 " h" chatH " Limit" chatMaxLength)
-		chatEdit.SetFont("s" chatFontSize)
-		chatClose := chatGui.AddText("x+0 y0 +Center cWhite +BackgroundRed +0x200 w20 h" chatH, "X")
+		chatGui.AddEdit("xm ym cWhite BackgroundBlack r1 Disabled1 w" chatW - 20 " h" chatH " Limit" chatMaxLength " v" chatEditName)
+		chatClose := chatGui.AddText("yp +Center cWhite +BackgroundRed +0x200 vgmxrClose w20 h" chatH, "X")
 		chatClose.SetFont("s12")
-		chatGui.gmxrEditCtrl := chatEdit
-		chatGui.gmxrCloseCtrl := chatClose
 		chatGui.Show("Hide AutoSize x" chatX " y" chatY)
-		chatGui.gmxrVisible := false
 		chatClose.OnEvent("Click", chatClose_Click(GuiCtrlObj, *) => changeChatGui(0))
 		chatGui.OnEvent("Size", chatGui_Size)
 	}
 	if state = 0
 	{
 		changeHotkeys(state)
-		chatEdit := chatGui.gmxrEditCtrl
-		chatEdit.Value := ""
-		chatEdit.Enabled := false
-		chatGui.Opt("-AlwaysOnTop")
+		chatGui[chatEditName].Text := ""
+		chatGui[chatEditName].Enabled := false
+		if isMoveEdit
+		{
+			saveChatGuiPos()
+		}
+		; 需要先最小化，再隐藏，否则窗口最小化后会残留显示标题栏
+		chatGui.Show("Minimize")
 		chatGui.Hide()
-		chatGui.gmxrVisible := false
 	} else if state = 1
 	{
-		chatEdit := chatGui.gmxrEditCtrl
-		chatEdit.Enabled := true
-		chatGui.Opt("+AlwaysOnTop")
 		Sleep getRandomDelayTime()
-		chatGui.Show()
-		chatGui.gmxrVisible := true
-		chatEdit.Focus()
+		chatGui.Show("Restore AutoSize")
+		; 允许调整窗口大小后，必须在输入框显示后，再次设置窗口最小及最大尺寸，才会及时生效
+		if isMoveEdit
+		{
+			chatGui.Opt("+MinSize60x" getEditAutoHeight(chatMinFontSize) " +MaxSize" A_ScreenWidth "x" getEditAutoHeight(chatMaxFontSize))
+		}
+		chatGui[chatEditName].Enabled := true
+		chatGui[chatEditName].Focus()
 		changeHotkeys(state)
 	}
 }
@@ -806,21 +798,21 @@ changeHotkeys(state)
 		;启用开始输入热键及禁用其他热键
 		if (inputKey = enterKeyName)
 		{
-			Hotkey("~" inputKey, enterInputKeyCallback, "On")
+			Hotkey("~" enterKeyName, enterInputKeyCallback, "On")
 		}else
 		{
 			static oldInputkey := inputKey
 			if oldInputkey != inputKey
 			{
 				;防止上次的开始输入热键未被及时禁用,导致启用多个开始输入热键
-				Hotkey("~" oldInputkey, inputKeyCallback, "Off")
+				Hotkey("~" oldInputkey " Up", inputKeyCallback, "Off")
 				oldInputkey := inputKey
 			}
-			Hotkey("~" inputKey, inputKeyCallback, "On")
+			Hotkey("~" inputKey " Up", inputKeyCallback, "On")
 			Hotkey("~" enterKeyName, sendKeyCallback, "Off")
 		}
-		Hotkey("~" escKeyName, escKeyCallback, "Off")
-		Hotkey("~" tabKeyName, tabKeyCallback, "Off")
+		Hotkey("~" escKeyName " Up", escKeyCallback, "Off")
+		Hotkey("~" tabKeyName " Up", tabKeyCallback, "Off")
 	}else if state = 1
 	{
 		;禁用开始输入热键及启用其他热键
@@ -829,24 +821,24 @@ changeHotkeys(state)
 			Hotkey("~" enterKeyName, enterInputKeyCallback, "On")
 		}else
 		{
-			Hotkey("~" inputKey, inputKeyCallback, "Off")
+			Hotkey("~" inputKey " Up", inputKeyCallback, "Off")
 			Hotkey("~" enterKeyName, sendKeyCallback, "On")
 		}
-		Hotkey("~" escKeyName, escKeyCallback, "On")
-		Hotkey("~" tabKeyName, tabKeyCallback, "On")
+		Hotkey("~" escKeyName " Up", escKeyCallback, "On")
+		Hotkey("~" tabKeyName " Up", tabKeyCallback, "On")
 	}else if state = -1
 	{
 		;禁用所有热键
 		if (inputKey = enterKeyName)
 		{
-			Hotkey("~" inputKey, enterInputKeyCallback, "Off")
+			Hotkey("~" enterKeyName, enterInputKeyCallback, "Off")
 		}else
 		{
-			Hotkey("~" inputKey, inputKeyCallback, "Off")
+			Hotkey("~" inputKey " Up", inputKeyCallback, "Off")
 			Hotkey("~" enterKeyName, sendKeyCallback, "Off")
 		}
-		Hotkey("~" escKeyName, escKeyCallback, "Off")
-		Hotkey("~" tabKeyName, tabKeyCallback, "Off")
+		Hotkey("~" escKeyName " Up", escKeyCallback, "Off")
+		Hotkey("~" tabKeyName " Up", tabKeyCallback, "Off")
 	}
 }
 ;当开始输入为Enter时的处理
@@ -857,6 +849,7 @@ enterInputKeyCallback(hotkeyName)
 		sendKeyCallback(hotkeyName)
 		return
 	}
+	KeyWait LTrim(hotkeyName, "~")
 	inputKeyCallback(hotkeyName)
 }
 ;开始输入
@@ -865,7 +858,6 @@ inputKeyCallback(hotkeyName)
 	Critical
 	if !WinActive("ahk_exe" processName)
 		return
-	KeyWait LTrim(hotkeyName, "~")
 	changeChatGui(1)
 }
 ;获取输入框最佳匹配高度
@@ -880,19 +872,21 @@ getEditAutoHeight(fontSize)
 getEditAutoFontSize(height)
 {
 	autoFontSize := Round((height - 8.0) * 72.0 / A_ScreenDPI)
-	if autoFontSize < 1
-		autoFontSize := 1
+	if autoFontSize < chatMinFontSize
+		autoFontSize := chatMinFontSize
+	else if autoFontSize > 72
+		autoFontSize := 72
 	return autoFontSize
 }
 ;聊天窗口大小改变
 chatGui_Size(GuiObj, MinMax, Width, Height)
 {
-	if MinMax
+	if (MinMax = -1)
 		return
 	if !isMoveEdit
 		return
-	chatEdit := GuiObj.gmxrEditCtrl
-	chatClose := GuiObj.gmxrCloseCtrl
+	chatEdit := GuiObj[chatEditName]
+	chatClose := GuiObj["gmxrClose"]
 	fontSize := getEditAutoFontSize(Height)
 	chatEdit.SetFont("s" fontSize)
 	chatEdit.Move(, , Width - 20, Height)
@@ -908,7 +902,7 @@ sendKeyCallback(hotkeyName)
 		return
 	if !WinActive(chatGui)
 		return
-	chatEdit := chatGui.gmxrEditCtrl
+	chatEdit := chatGui[chatEditName]
 	;兼容在中文输入状态下按Enter键直接输入英文
 	oldChatText := chatEdit.Value
 	KeyWait LTrim(hotkeyName, "~")
@@ -918,8 +912,6 @@ sendKeyCallback(hotkeyName)
 	changeChatGui(0)
 	if !WinExist("ahk_exe" processName)
 		return
-	;默认编辑控件上获取的文本就是UTF-16编码
-	; chatText := getUTF8Str(chatText)
 	WinActivate()
 	switch sendMethod
 	{
@@ -1063,7 +1055,6 @@ tabKeyCallback(hotkeyName)
 		return
 	if !WinActive(chatGui)
 		return
-	KeyWait LTrim(hotkeyName, "~")
 	if !WinExist("ahk_exe" processName)
 		return
 	WinActivate()
@@ -1074,6 +1065,9 @@ tabKeyCallback(hotkeyName)
 		KeyWait("Tab", "L T" maxwaitTime)
 		if !chatGui
 			return
+		;解决因模拟按下Tab键导致输入框文本被全选的问题
+		chatGui[chatEditName].GetPos(, , &chatEditW)
+		ControlClick(chatGui[chatEditName], chatGui, , , , "x" chatEditW)
 		WinActivate(chatGui)
 	}
 }
@@ -1084,7 +1078,6 @@ escKeyCallback(hotkeyName)
 	if !chatGui
 		return
 	chatGuiActive := WinActive(chatGui)
-	KeyWait LTrim(hotkeyName, "~")
 	changeChatGui(0)
 	if chatGuiActive && WinExist("ahk_exe" processName)
 	{
@@ -1187,7 +1180,7 @@ readCheckGameCfgData(readGame)
 	;读取并校验当前选择游戏的“最小、最大操作延时”配置项
 	readMinDelay := readCfg(readGame, minDelayName, "100")
 	if !IsInteger(readMinDelay)
-		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" minDelayName "=" readMinDelay "`n对应的值必须是10的倍数的整数！")
+		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" minDelayName "=" readMinDelay "`n对应的值必须是正整数！")
 	readMinDelay := Integer(readMinDelay)
 	if readMinDelay < minRandomTime
 		readMinDelay := minRandomTime
@@ -1196,7 +1189,7 @@ readCheckGameCfgData(readGame)
 	global minDelayTime := readMinDelay
 	readMaxDelay := readCfg(readGame, maxDelayName, "120")
 	if !IsInteger(readMaxDelay)
-		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" maxDelayName "=" readMaxDelay "`n对应的值必须是10的倍数的整数！")
+		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" maxDelayName "=" readMaxDelay "`n对应的值必须是正整数！")
 	readMaxDelay := Integer(readMaxDelay)
 	if readMaxDelay < minRandomTime
 		readMaxDelay := minRandomTime
@@ -1206,7 +1199,7 @@ readCheckGameCfgData(readGame)
 	;读取并校验当前选择游戏的“最小、最大键击延时”配置项
 	readMinPress := readCfg(readGame, minPressName, "10")
 	if !IsInteger(readMinPress)
-		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" minPressName "=" readMinPress "`n对应的值必须是10的倍数的整数！")
+		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" minPressName "=" readMinPress "`n对应的值必须是正整数！")
 	readMinPress := Integer(readMinPress)
 	if readMinPress < minRandomTime
 		readMinPress := minRandomTime
@@ -1215,7 +1208,7 @@ readCheckGameCfgData(readGame)
 	global minPressTime := readMinPress
 	readMaxPress := readCfg(readGame, maxPressName, "20")
 	if !IsInteger(readMaxPress)
-		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" maxPressName "=" readMaxPress "`n对应的值必须是10的倍数的整数！")
+		cfgErrMsgBox(profilesName "：`n[" selectGame "]`n" maxPressName "=" readMaxPress "`n对应的值必须是正整数！")
 	readMaxPress := Integer(readMaxPress)
 	if readMaxPress < minRandomTime
 		readMaxPress := minRandomTime
@@ -1396,12 +1389,12 @@ setRandomKeyDelay()
 ;获取随机的键击时间
 getRandomPressTime()
 {
-	return Round(Random(minPressTime, maxPressTime) / 10) * 10
+	return Random(minPressTime, maxPressTime)
 }
 ;获取随机的操作时间
 getRandomDelayTime()
 {
-	return Round(Random(minDelayTime, maxDelayTime) / 10) * 10
+	return Random(minDelayTime, maxDelayTime)
 }
 ;支持自定义弹出坐标的MsgBox
 MsgBoxAt(x, y, text?, title?, options?)
@@ -1591,7 +1584,7 @@ defaultGameCfg()
 	(
 [main]
 选择游戏=幽灵行动：荒野
-最大等待响应时间=2.5
+最大等待响应时间=5
 输入框最大字符数=88
 延时最大值=1000
 启动声明=1
@@ -1602,9 +1595,9 @@ defaultGameCfg()
 发送文本方式=1
 修复中文乱码=1
 最小操作延时=100
-最大操作延时=200
-最小键击延时=20
-最大键击延时=100
+最大操作延时=120
+最小键击延时=10
+最大键击延时=20
 输入框X=1552
 输入框Y=674
 输入框W=344
@@ -1614,9 +1607,9 @@ defaultGameCfg()
 开始输入=Enter
 发送文本方式=5
 最小操作延时=100
-最大操作延时=200
-最小键击延时=20
-最大键击延时=100
+最大操作延时=120
+最小键击延时=10
+最大键击延时=20
 输入框X=1420
 输入框Y=696
 输入框W=384
@@ -1626,9 +1619,9 @@ defaultGameCfg()
 开始输入=Enter
 发送文本方式=5
 最小操作延时=100
-最大操作延时=200
-最小键击延时=20
-最大键击延时=100
+最大操作延时=120
+最小键击延时=10
+最大键击延时=20
 输入框X=1420
 输入框Y=696
 输入框W=384
@@ -1638,9 +1631,9 @@ defaultGameCfg()
 开始输入=y
 发送文本方式=2
 最小操作延时=100
-最大操作延时=200
-最小键击延时=20
-最大键击延时=100
+最大操作延时=120
+最小键击延时=10
+最大键击延时=20
 输入框X=1382	
 输入框Y=778
 输入框W=288
@@ -1650,9 +1643,9 @@ defaultGameCfg()
 开始输入=y
 发送文本方式=2
 最小操作延时=100
-最大操作延时=200
-最小键击延时=20
-最大键击延时=100
+最大操作延时=120
+最小键击延时=10
+最大键击延时=20
 输入框X=1382
 输入框Y=778
 输入框W=288
@@ -1662,9 +1655,9 @@ defaultGameCfg()
 开始输入=Enter
 发送文本方式=1
 最小操作延时=100
-最大操作延时=200
-最小键击延时=20
-最大键击延时=100
+最大操作延时=120
+最小键击延时=10
+最大键击延时=20
 输入框X=98
 输入框Y=948
 输入框W=600
@@ -1730,12 +1723,12 @@ clickReadme(*)
 
 发送文本方式：不同游戏，可调试不同的“发送文本方式”来兼容。
 
-键击延时：此为工具模拟按键按下的保持时间，默认为10~100毫秒之间随机。
+键击延时：此为工具模拟按键按下的保持时间，默认为10~20毫秒之间随机。
 对于一些游戏，太低的键击延时将导致模拟按键不生效。
 如果出现概率性无法联动打开游戏内输入框，或者发送漏字的情况，
 可适当调高此参数来调试。
 
-操作延时：此为工具模拟按键操作前的延时，默认为10~100毫秒之间随机。
+操作延时：此为工具模拟按键操作前的延时，默认为100~120毫秒之间随机。
 对于一些游戏，太低的操作延时将导致多个连续的模拟按键动作不生效。
 教高的操作延时会让工具的开启输入、发送文本、取消输入动作较为迟滞。
 
