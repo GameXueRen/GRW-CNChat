@@ -223,7 +223,7 @@ creatMyGuiCtrl()
 	timeBtnW := 60						;延时按钮宽
 	sendDDLW := mainCtrlW - marginX * 4 - timeBtnW * 2	;发送方式列表宽
 	myGui.AddGroupBox("Section xs ys+" selectBoxH+marginY " w" mainCtrlW " h" sendBoxH, "发送文本方式")
-	global sendMethodCtrl := myGui.AddDropDownList("v" sendMethodKey " Choose1 xs+" marginX " ys+" sendMarginTop " w" sendDDLW, ["ControlSendText", "Send{ASC nnnnn}", "SendText", "PostMessage", "CopyPaste"])
+	global sendMethodCtrl := myGui.AddDropDownList("v" sendMethodKey " Choose1 xs+" marginX " ys+" sendMarginTop " w" sendDDLW, ["ControlSendText", "Send{ASC nnnnn}", "Send{U+nnnn}", "SendText", "PostMessage", "CopyPaste"])
 	global sendMethodNameCtrl := myGui.AddText("+0x200 xp cRed wp y+2", "发送到指定的窗口")
 	global pressTimeCtrl := myGui.AddButton("v" pressTimeKey " x+" marginX " ys+" sendMarginTop " w" timeBtnW " h" sendBoxH-sendMarginTop-marginY, "键击延时`n10-20")
 	global delayTimeCtrl := myGui.AddButton("v" delayTimeKey " yp wp hp", "窗口延时`n100-120")
@@ -801,10 +801,12 @@ sendMethod_Change(GuiCtrlObj, Info)
 	else if sendMethod = 2
 		methodName := "模拟 {Alt + GBK编码} 发送"
 	else if sendMethod = 3
-		methodName := "发送到当前活动窗口"
+		methodName := "发送 Unicode 字符编码"
 	else if sendMethod = 4
-		methodName := "发送到指定窗口的消息队列中"
+		methodName := "发送到当前活动窗口"
 	else if sendMethod = 5
+		methodName := "发送到指定窗口的消息队列中"
+	else if sendMethod = 6
 		methodName := "模拟Ctrl+C复制 Ctrl+V粘贴"
 	else {
 		sendMethod := 1
@@ -1115,7 +1117,7 @@ startMonitorGame()
 			if !WinWaitNotActive(matchTitle, , 2)
 				continue
 			if (gameActive = -1)
-				return
+				break
 			global gameActive := 0
 			if isNotChatMode {
 				Hotkey(inputKey " Up", inputKeyCallback, "Off")
@@ -1129,7 +1131,7 @@ startMonitorGame()
 			if !WinWaitActive(matchTitle, , 2)
 				continue
 			if (gameActive = -1)
-				return
+				break
 			global gameActive := 1
 			if isNotChatMode {
 				Hotkey(inputKey " Up", inputKeyCallback, "On")
@@ -1377,6 +1379,9 @@ chatClose_Click(GuiCtrlObj, Info)
 ;输入框获得键盘焦点
 chatEditFocus(guiCtrlObj, info)
 {
+	if isAutoLockCaps {
+		SetCapsLockState("Off")
+	}
 	;启用发送及切换频道热键
 	Hotkey("~" enterKeyName, sendKeyCallback, "On")
 	if isNotChatMode {
@@ -1450,15 +1455,43 @@ sendTextToGame(chatText, chatMode := true)
 			;Alt+nnnnn小键盘方法
 			if WinWaitActive(, , maxwaitTime) {
 				switchCNIME(true)
+				asccode := ""
 				loop Parse chatText {
-					SendEvent "{ASC " getGBKCode(A_LoopField) "}"
+					;AHK的每个字符串都以"空终止符"结束，StrPut两参数计算后的实际字节数需-1
+					;分配精确大小的缓冲区(已排除空终止符)
+					buf := Buffer(StrPut(A_LoopField, "CP936") - 1)
+					;复制字符并转换编码，CP936为GBK编码
+					bytes := StrPut(A_LoopField, buf, "CP936")
+					;生成ASC码(十进制值)，英文字符为单字节，中文字符为双字节，区分处理
+					asc := NumGet(buf, 0, "UChar")
+					if (bytes = 2) {
+						asc := (asc << 8) + NumGet(buf, 1, "UChar")
+					}
+					asccode .= "{ASC " asc "}"
 				}
+				SendEvent asccode
+				asccode := ""
 				if chatMode {
 					setRandomKeyDelay()
 					SendEvent "{Enter}"
 				}
 			}
 		case 3:
+			;Send {U+nnnn} Unicode字符编码
+			if WinWaitActive(, , maxwaitTime) {
+				switchCNIME(true)
+				unicode := ""
+				loop Parse chatText {
+					unicode .= Format("{{}U+{:04X}{}}", Ord(A_LoopField))
+				}
+				SendEvent unicode
+				unicode := ""
+				if chatMode {
+					setRandomKeyDelay()
+					SendEvent "{Enter}"
+				}
+			}
+		case 4:
 			;SendText 方法
 			if WinWaitActive(, , maxwaitTime) {
 				switchCNIME(true)
@@ -1468,7 +1501,7 @@ sendTextToGame(chatText, chatMode := true)
 					SendEvent "{Enter}"
 				}
 			}
-		case 4:
+		case 5:
 			;PostMessage 方法
 			switchCNIME(true)
 			waitTime := getRandomPressTime()
@@ -1482,7 +1515,7 @@ sendTextToGame(chatText, chatMode := true)
 					SendEvent "{Enter}"
 				}
 			}
-		case 5:
+		case 6:
 			;复制粘贴方法
 			if WinWaitActive(, , maxwaitTime) {
 				switchCNIME(true)
@@ -1612,16 +1645,6 @@ getGameMatchTitle()
 		else
 			return notExistTitle
 	}
-}
-;获取单个字符的GBK编码
-getGBKCode(str)
-{
-	;计算所需的大小并分配缓冲
-	buf := Buffer(StrPut(str, "CP936")) 
-	;复制字符并转换编码
-	StrPut(str, buf, "CP936")
-	;计算GBK编码的十进制值
-	return (NumGet(buf, 0, "UChar") << 8) + NumGet(buf, 1, "UChar")
 }
 ;获取输入框最佳匹配高度
 getEditAutoHeight(fontSize)
