@@ -2,16 +2,18 @@
 ;编译后的程序属性
 ;@Ahk2Exe-SetCompanyName GameXueRen
 ;@Ahk2Exe-SetCopyright Copyright © 2024-2025 GameXueRen
-;@Ahk2Exe-SetDescription 游戏无缝输入中文v3
+;@Ahk2Exe-SetDescription 游戏无缝输入中文
 ;@Ahk2Exe-SetLanguage 0x0804
 ;@Ahk2Exe-SetName 游戏无缝输入中文
 ;@Ahk2Exe-SetOrigFilename GRW-CNChat
 ;@Ahk2Exe-SetProductVersion 3.0
 ;@Ahk2Exe-SetVersion 3.0
 ;@Ahk2Exe-SetMainIcon images\logo_256x256.ico
-;@Ahk2Exe-ExeName 游戏无缝输入中文Beta3.exe
+;@Ahk2Exe-ExeName 游戏无缝输入中文v3.exe
+;单例运行
+#SingleInstance Force
 ;版本号
-toolVersion := "Beta3"
+toolVersion := "v3"
 
 ;设置速度最快的WinTitle匹配模式
 SetTitleMatchMode 3
@@ -1321,10 +1323,10 @@ getChatGuiPos(gameX, gameY, gameW, gameH)
 {
 	chatPosValue := readSelectGameCfg(gameW "x" gameH)
 	;输入框相对/绝对坐标默认值（相对于游戏窗口）
-	chatW := 300
+	chatW := 360
 	chatX := Round(gameW-chatW)
 	chatY := Round(gameH*0.6)
-	chatFontSize := 12
+	chatFontSize := 14
 	;存储值解析
 	loop parse chatPosValue, ",", A_Space A_Tab
 	{
@@ -1598,7 +1600,7 @@ tabKeyCallback(hotkeyName)
 ;IME的ID:"zh",134481924 "en",67699721
 switchCNIME(isSwitchCN := false)
 {
-	if !isFixCNErrCtrl.Value
+	if !(isFixCNErrCtrl.Value)
 		return
 	static inputLocaleID := -1
 	if isSwitchCN {
@@ -2186,27 +2188,27 @@ pressTime=10-20
 delayTime=100-120
 autoLockCaps=0
 notChatMode=0
-1920x1080=1552,674,344,12
+1920x1080=1552,674,360,14
 [幽灵行动：断点]
 exe=GRB.exe
 inputKey=Enter
 sendMethod=5
-1920x1080=1420,696,384,12
+1920x1080=1420,696,384,14
 [幽灵行动：断点-vulkan]
 exe=GRB_vulkan.exe
 inputKey=Enter
 sendMethod=5
-1920x1080=1420,696,384,12
+1920x1080=1420,696,384,14
 [彩虹六号：围攻]
 exe=RainbowSix.exe
 inputKey=y
 sendMethod=2
-1920x1080=1382,778,288,12
+1920x1080=1382,778,288,14
 [彩虹六号：围攻-DX11]
 exe=RainbowSix_DX11.exe
 inputKey=y
 sendMethod=2
-1920x1080=1382,778,288,12
+1920x1080=1382,778,288,14
 [无人深空]
 exe=NMS.exe
 inputKey=Enter
@@ -2288,9 +2290,10 @@ v2版提供自定义按键、参数微调功能，来适用更多游戏。
 增加“修复发送中文后显示为???乱码”的功能。
 增加“以管理员身份运行”提示，提高兼容性。
 增加更多自定义配置选项，见工具设置。
-公测版v3（2025/02/09）:
+正式版v3（2025/02/21）:
 优化了添加新的游戏支持、手动发送的窗口体验。
 增加窗口标题匹配，来适配无法通过运行程序定位窗口的游戏。
+增加以Unicode字符编码的发送文本方式
 增加“游玩时禁用中文输入法”的功能。
 增加“非聊天模式”的功能，仅输入文本，不模拟其余按键操作。
 调整聊天框后的位置及大小，与游戏分辨率绑定保存相对坐标。
